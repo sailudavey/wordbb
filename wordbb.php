@@ -84,14 +84,13 @@ function wordbb_check_config() {
 	if(!empty($wordbb_mybb_abs) && !file_exists($wordbb_mybb_abs))
 		$errors[]='MyBB root folder does not exist';
 
-	// set default values
 	$wordbb_post_forum=get_option('wordbb_post_forum');
 	if(false===$wordbb_post_forum || empty($wordbb_post_forum))
-		update_option('wordbb_post_forum',2);
+		$errors[]='Default post forum field empty';
 
 	$wordbb_post_author=get_option('wordbb_post_author');
 	if(false===$wordbb_post_author || empty($wordbb_post_author))
-		update_option('wordbb_post_author',1);
+		$errors[]='Default post author field empty';
 
 	if(!empty($errors))
 		wordbb_set_errors('Configuration is not complete. Go to <a href="options-general.php?page=wordbb-options">WordBB Options</a>',$errors,false);
@@ -182,8 +181,8 @@ function wordbb_admin_init() {
 	global $wordbb;
 
 	// register settings
-	register_setting( 'wordbb', 'wordbb_post_forum', 'wordbb_post_forum_sanitize' );
-	register_setting( 'wordbb', 'wordbb_post_author', 'wordbb_post_author_sanitize' );
+	register_setting( 'wordbb', 'wordbb_post_forum', 'intval' );
+	register_setting( 'wordbb', 'wordbb_post_author', 'intval' );
 	register_setting( 'wordbb', 'wordbb_mybb_url' );
 	register_setting( 'wordbb', 'wordbb_mybb_abs', 'wordbb_mybb_abs_sanitize' );
 	register_setting( 'wordbb', 'wordbb_dbname' );
@@ -199,8 +198,6 @@ function wordbb_admin_init() {
 	register_setting( 'wordbb', 'wordbb_langyesterday', 'wordbb_langyesterday_sanitize' );
 
 	function wordbb_mybb_abs_sanitize($v) { return str_replace('\\', '/', $v); }
-	function wordbb_post_forum_sanitize($v) { if(empty($v)) return '2'; }
-	function wordbb_post_author_sanitize($v) { if(empty($v)) return '1'; }
 	function wordbb_langtoday_sanitize($v) { if(empty($v)) $v='Today'; return $v; }
 	function wordbb_langyesterday_sanitize($v) { if(empty($v)) $v='Yesterday'; return $v; }
 
@@ -565,7 +562,7 @@ function wordbb_options_page() {
 		</tr>
 
 		<tr valign="top">
-			<th scope="row">Default post forum</th>
+			<th scope="row">Default post forum</th><?php echo get_option('wordbb_post_forum') ?>
 			<td>
 			<?php echo wordbb_get_array_html($wordbb->forums,'wordbb_post_forum',get_option('wordbb_post_forum'),'',array(),'fid') ?>
 			</td>
