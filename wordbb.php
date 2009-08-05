@@ -1,0 +1,1169 @@
+<?php
+
+/**
+ * @package WordBB
+ * @author Hangman
+ * @version 0.1
+ */
+/*
+Plugin Name: WordBB - WP side
+Plugin URI: http://valadilene.org/wordbb
+Description: WordPress/MyBB bridge.
+Author: Hangman
+Version: 0.1
+Author URI: http://valadilene.org
+*/
+
+require_once('functions.php');
+require_once('functions_mybb.php');
+require_once('template.php');
+
+wordbb_init();
+
+if(is_admin())
+{
+	add_action('admin_menu', 'wordbb_plugin_options_menu');
+	add_action('admin_init', 'wordbb_admin_init');
+	add_action('admin_head', 'wordbb_admin_head');
+}
+
+if($wordbb->init)
+{
+	// plugin hooks
+
+	if(is_admin())
+	{
+		// init
+		add_action('admin_menu', 'wordbb_plugin_menu');
+
+		// users
+		add_action('admin_head', 'wordbb_admin_users_update');
+		add_action('manage_users_custom_column', 'wordbb_users_custom_column', 8, 3);
+		add_filter('manage_users_columns', 'wordbb_users_columns');
+
+		// posts
+		add_action('publish_post', 'wordbb_publish_post');
+		add_action('delete_post', 'wordbb_delete_bridge_thread');
+	}
+	else
+	{
+		// non-admin enqueues, actions, and filters
+
+		add_action('loop_start', 'wordbb_loop_start');
+		add_action('comment_loop_start', 'wordbb_comment_loop_start');
+
+		if(get_option('wordbb_use_mybb_comments')=='on')
+		{
+			add_filter('get_comments_number', 'wordbb_get_comments_number');
+
+			if(get_option('wordbb_show_mybb_comments')=='on')
+			{
+				add_filter('comments_array', 'wordbb_get_comments_array');
+				add_filter('get_comment_link', 'wordbb_get_comment_link');
+			}
+		}
+	}
+
+	add_action('widgets_init', 'wordbb_register_widget');
+	add_action('user_register', 'wordbb_user_register');
+}
+
+function wordbb_check_config() {
+	global $wordbb;
+
+	$errors=array();
+
+	$wordbb_mybb_url=trim(get_option('wordbb_mybb_url'));
+	if(false===$wordbb_mybb_url || empty($wordbb_mybb_url))
+		$errors[]='MyBB URL field empty';
+
+	$wordbb_mybb_abs=trim(get_option('wordbb_mybb_abs'));
+	if(false===$wordbb_mybb_abs || empty($wordbb_mybb_abs))
+		$errors[]='MyBB root folder field empty';
+
+	if(!empty($wordbb_mybb_abs) && !file_exists($wordbb_mybb_abs))
+		$errors[]='MyBB root folder does not exist';
+
+	// set default values
+	$wordbb_post_forum=get_option('wordbb_post_forum');
+	if(false===$wordbb_post_forum || empty($wordbb_post_forum))
+		update_option('wordbb_post_forum',2);
+
+	$wordbb_post_author=get_option('wordbb_post_author');
+	if(false===$wordbb_post_author || empty($wordbb_post_author))
+		update_option('wordbb_post_author',1);
+
+	if(!empty($errors))
+		wordbb_set_errors('Configuration is not complete. Go to <a href="options-general.php?page=wordbb-options">WordBB Options</a>',$errors,false);
+
+}
+
+function wordbb_init() {
+	global $wordbb, $wpdb;
+
+	$wordbb->errors=array();
+	$wordbb->bridges=array();
+
+	// check if meta table exists, if not create it
+	$wpdb->query("CREATE TABLE IF NOT EXISTS `wordbb_meta` (`type` enum('cat','post','user'),`wp_id` int(11),`mybb_id` int(11))");
+
+	$prefix=get_option('wordbb_dbprefix');
+	if(empty($prefix))
+		$prefix='mybb_';
+
+	// store mybb db table names
+	$wordbb->table_forums=$prefix.'forums';
+	$wordbb->table_users=$prefix.'users';
+	$wordbb->table_posts=$prefix.'posts';
+	$wordbb->table_threads=$prefix.'threads';
+	$wordbb->table_settings=$prefix.'settings';
+
+	wordbb_check_config();
+	$wordbb->init=wordbb_select_mybb_db();
+
+	wordbb_display_errors();
+
+	if($wordbb->init)
+	{
+		// store mybb url
+		$wordbb->mybb_url=get_option('wordbb_mybb_url');
+
+		// store mybb inc folder path
+		$wordbb->mybb_inc=get_option('wordbb_mybb_abs');
+
+		// wordbb plugin url
+		$wordbb->plugin_url=get_bloginfo('wpurl'). "/wp-content/plugins/" . plugin_basename(dirname(__FILE__));
+
+		// wordbb js url
+		$wordbb->js_url=$wordbb->plugin_url.'/wordbb.js';
+
+		// plugin action file url
+		$wordbb->action_url=$wordbb->plugin_url.'/actions.php';
+
+		// mybb settings
+		$wordbb->mybbsettings=_wordbb_get_mybb_settings();
+
+		// forums array
+		$wordbb->forums=_wordbb_get_forums();
+		$users=_wordbb_get_users();
+		$wordbb->users=$users['usernames'];
+		$wordbb->usersinfo=$users['usersinfo'];
+
+		// get currently logged in info (if any)
+		$mybbuser=$_COOKIE['mybbuser'];
+		if(isset($mybbuser) && !empty($mybbuser))
+		{
+			$mybbuser=explode('_',$mybbuser);
+			$uid=$mybbuser[0];
+			$key=$mybbuser[1];
+			if($wordbb->usersinfo[$uid]->loginkey==$key)
+				$wordbb->loggeduserinfo=$wordbb->usersinfo[$uid];
+		}
+
+		// define WP pluggables functions
+		wordbb_pluggables();
+	}
+}
+
+function wordbb_admin_head() {
+	global $wordbb;
+
+	echo '
+	<style type="text/css">
+		ul.wordbb-errors {
+			list-style-type: disc;
+			padding-left: 24px;
+		}
+	</style>
+	';
+}
+
+function wordbb_admin_init() {
+	global $wordbb;
+
+	// register settings
+	register_setting( 'wordbb', 'wordbb_post_forum', 'wordbb_post_forum_sanitize' );
+	register_setting( 'wordbb', 'wordbb_post_author', 'wordbb_post_author_sanitize' );
+	register_setting( 'wordbb', 'wordbb_mybb_url' );
+	register_setting( 'wordbb', 'wordbb_mybb_abs', 'wordbb_mybb_abs_sanitize' );
+	register_setting( 'wordbb', 'wordbb_dbname' );
+	register_setting( 'wordbb', 'wordbb_dbuser' );
+	register_setting( 'wordbb', 'wordbb_dbpass' );
+	register_setting( 'wordbb', 'wordbb_dbhost' );
+	register_setting( 'wordbb', 'wordbb_dbprefix' );
+	register_setting( 'wordbb', 'wordbb_create_thread' );
+	register_setting( 'wordbb', 'wordbb_delete_thread' );
+	register_setting( 'wordbb', 'wordbb_use_mybb_comments' );
+	register_setting( 'wordbb', 'wordbb_show_mybb_comments' );
+	register_setting( 'wordbb', 'wordbb_langtoday', 'wordbb_langtoday_sanitize' );
+	register_setting( 'wordbb', 'wordbb_langyesterday', 'wordbb_langyesterday_sanitize' );
+
+	function wordbb_mybb_abs_sanitize($v) { return str_replace('\\', '/', $v); }
+	function wordbb_post_forum_sanitize($v) { if(empty($v)) return '2'; }
+	function wordbb_post_author_sanitize($v) { if(empty($v)) return '1'; }
+	function wordbb_langtoday_sanitize($v) { if(empty($v)) $v='Today'; return $v; }
+	function wordbb_langyesterday_sanitize($v) { if(empty($v)) $v='Yesterday'; return $v; }
+
+	// enqueue wordbb js
+	wp_enqueue_script('wordbb_js',$wordbb->js_url,array('jquery'),'0.1');
+}
+
+function wordbb_register_widget()
+{
+//	register_sidebar_widget('WordBB Latest Threads', 'wordbb_widget');
+//	register_widget_control('WordBB Latest Threads', 'wordbb_widget_control');
+
+	$widget_options = array('classname' => 'wordbb_widget', 'description' => "Shows latest MyBB threads/posts on your sidebar." );
+	wp_register_sidebar_widget('wordbb_widget','WordBB Latest Threads','wordbb_widget',$widget_options);
+	wp_register_widget_control('wordbb_widget','WordBB Latest Threads','wordbb_widget_control',$widget_options);
+}
+
+function wordbb_widget_control()
+{
+	if($_POST['wordbb_widget_submit'])
+	{
+		$mode=$_POST['wordbb_widget_mode'];
+		$title=$_POST['wordbb_widget_title'];
+		if(!isset($title) || empty($title))
+			$title='Forums Latest '.($mode=='threads'?'Threads':'Posts');
+		$exclude=$_POST['wordbb_widget_exclude'];
+		if(!empty($exclude))
+		{
+			$exclude=explode(',',trim($exclude));
+			$fids=array();
+			for($i=0; $i<count($exclude); $i++)
+			{
+				$fid=intval(trim($exclude[$i]));
+				if($fid>0)
+					$fids[]=$fid;
+			}
+			$exclude=implode(',',$fids);
+		}
+		$count=intval($_POST['wordbb_widget_count']);
+		if($count<=0)
+			$count=10;
+
+		update_option('wordbb_widget_title',$title);
+		update_option('wordbb_widget_mode',$mode);
+		update_option('wordbb_widget_exclude',$exclude);
+		update_option('wordbb_widget_count',$count);
+	}
+
+	$title=get_option('wordbb_widget_title');
+	$mode=get_option('wordbb_widget_mode');
+	$exclude=get_option('wordbb_widget_exclude');
+	$count=get_option('wordbb_widget_count');
+
+?>	
+	<ul>
+	<li><?php _e('Title', 'wordbb'); ?>
+		<input style="width: 100%" id="wordbb_widget_title" name="wordbb_widget_title" type="text" value="<?php echo $title; ?>" />
+	</li>
+
+	<li><?php _e('Mode', 'wordbb'); ?>
+		<select style="width: 100%" id="wordbb_widget_mode" name="wordbb_widget_mode">
+		<option value="threads" <?php if($mode=='threads') echo 'selected' ?>>Latest threads</option>
+		<option value="posts" <?php if($mode=='posts') echo 'selected' ?>>Latest posts</option>
+		</select>
+	</li>
+
+	<li><?php _e('Max entry count', 'wordbb'); ?>
+		<input style="width: 100%" id="wordbb_widget_count" name="wordbb_widget_count" type="text" value="<?php echo $count ?>" />
+	</li>
+
+	<li><?php _e('Exclude forums', 'wordbb'); ?>
+		<span style="font-size: 6pt">(comma separated list of forum IDs)</span>
+		<input style="width: 100%" id="wordbb_widget_exclude" name="wordbb_widget_exclude" type="text" value="<?php echo $exclude ?>" />
+	</li>
+	</ul>
+
+	<input style="width: 100%" type="hidden" id="wordbb_widget_submit" name="wordbb_widget_submit" value="1" />
+<?php
+}
+
+function wordbb_widget($args)
+{
+	global $wordbb;
+
+	extract($args);
+
+	$mode=get_option('wordbb_widget_mode');
+	$title=get_option('wordbb_widget_title');
+	$exclude=get_option('wordbb_widget_exclude');
+	$count=get_option('wordbb_widget_count');
+
+	echo $before_widget;
+	echo $before_title;
+	echo $title;
+	echo $after_title;
+
+	$entries=($mode=='threads')?wordbb_get_latest_threads($count,$exclude):wordbb_get_latest_posts($count,$exclude);
+
+	if(is_array($entries))
+?>
+		<ul>
+<?php
+		foreach($entries as $entry)
+		{
+?>
+		<li>
+		<?php if($mode=='threads') : ?>
+		<a href="<?php echo $wordbb->mybb_url.'/showthread.php?tid='.$entry->tid ?>"><?php echo $entry->subject ?></a>
+		<?php else : ?>
+		<a href="<?php echo $wordbb->mybb_url.'/showthread.php?tid='.$entry->tid.'&pid='.$entry->pid.'#pid'.$entry->pid ?>"><?php echo $entry->subject ?></a>
+		<?php endif ?>
+		</li>
+<?php
+		}
+?>
+		</ul>
+<?php
+
+	echo $after_widget;
+}
+
+function wordbb_pluggables() {
+
+	if(!function_exists('wp_sanitize_redirect')) :
+		function wp_sanitize_redirect($location) {
+			$location = preg_replace('|^a-z0-9-~+_.?#=&;,/:%!|i', '', $location);
+			$location = wp_kses_no_null($location);
+
+			// remove %0d and %0a from location
+			$strip = array('%0d', '%0a');
+			$found = true;
+			while($found) {
+				$found = false;
+				foreach( (array) $strip as $val ) {
+					while(strpos($location, $val) !== false) {
+						$found = true;
+						$location = str_replace($val, '', $location);
+					}
+				}
+			}
+			return $location;
+		}
+	endif;
+}
+
+function wordbb_error_handling($location)
+{
+	global $wordbb;
+
+	$errors_title=$wordbb->errors['title'];
+	$errors_array=$wordbb->errors['errors'];
+
+	$errors='';
+
+	if(is_array($errors_array))
+	{
+		$errors.='errors_title='.urlencode($errors_title).'&';
+
+		foreach($errors_array as $wordbb_error)
+		{
+			$errors.='errors[]='.urlencode($wordbb_error).'&';
+		}
+		$errors=rtrim($errors,'&');
+	}
+
+	if(!empty($errors))
+		$location.='&'.$errors;
+
+	return $location;
+}
+
+function wordbb_set_errors($title,$errors,$getparams=true) {
+	global $wordbb;
+
+	$wordbb->errors=array('title'=>$title,'errors'=>$errors);
+	if($getparams)
+		add_filter('wp_redirect',wordbb_error_handling);
+}
+
+function wordbb_display_errors() {
+	global $wordbb;
+
+	if(empty($wordbb->errors))
+	{
+		$wordbb->errors['title']=$_GET['errors_title'];
+		$wordbb->errors['errors']=$_GET['errors'];
+	}
+	
+	// display error messages
+	if(isset($wordbb->errors['errors']))
+	{
+		function wordbb_error() {
+			global $wordbb;
+			
+			$errors_message='<ul class="wordbb-errors">';
+			foreach($wordbb->errors['errors'] as $error)
+			{
+				$errors_message.='<li>'.$error.'</li>';
+			}
+			$errors_message.='</ul>';
+			
+			echo "
+			<div id='wordbb-error' class='updated fade'><p><strong>".__('WordBB errors &mdash; &#8220;<em>'.$wordbb->errors['title'].'</em>&#8221; ')."</strong><br /><br />".$errors_message."</p></div>
+			";
+		}
+		add_action('admin_notices', 'wordbb_error');
+	}
+}
+
+function wordbb_do_action($action,$params)
+{
+	global $wordbb;
+
+	$params['wordbb_mybb_abs']=get_option('wordbb_mybb_abs');
+	$params['_wordbbnonce']=wordbb_create_nonce($action);
+
+	// uses parse_url to validate data
+	// tnx to Tikitiki
+	$url = parse_url($wordbb->action_url);
+	if(!$url['host'])
+	{
+		return false;
+	}
+	if(!$url['port'])
+	{
+		$url['port'] = 80;
+	}
+	if(!$url['path'])
+	{
+		$url['path'] = "/";
+	}
+	if($url['query'])
+	{
+		$url['path'] .= "?{$url['path']}";
+	}
+
+	$reqbody = "";
+	$reqbody.= "action=".urlencode($action);
+	foreach($params as $key=>$val)
+	{
+		if (!empty($reqbody)) $reqbody.= "&";
+		$reqbody.= $key."=".urlencode($val);
+	}
+
+	$contentlength = strlen("$reqbody\r\n"); // tnx to Rog
+	// tnx to mike for letting me discover the Host \r\n bug
+	$reqheader =  "POST {$url['path']} HTTP/1.0\r\n".
+	"Host: {$url['host']}\r\n". "User-Agent: PostIt\r\n". "Connection: Close\r\n".
+	"Content-Type: application/x-www-form-urlencoded\r\n".
+	"Content-Length: $contentlength\r\n\r\n".
+	"$reqbody\r\n";
+	
+	$socket = @fsockopen($url['host'], $url['port'], $errno, $errstr);
+	@stream_set_timeout($socket, 10);
+	if(!$socket)
+	{
+		return false;
+	}
+
+	fputs($socket, $reqheader);
+
+	while(!feof($socket))
+	{
+		$result .= fgets($socket, 12800);
+	}
+
+	fclose($socket);
+	
+	//separate header and content
+	$data = explode("\r\n\r\n", $result, 2);
+	//$result=array('header'=>$data[0],'body'=>$data[1]);
+	$result=unserialize($data[1]);
+	if($result===false)
+		$result=$data[1];
+	
+	return $result;
+}
+
+function wordbb_plugin_menu() {
+	add_posts_page('WordBB Categories', 'WordBB Categories', 8, 'wordbb-categories', 'wordbb_categories_page');
+	add_posts_page('WordBB Posts', 'WordBB Posts', 8, 'wordbb-posts', 'wordbb_posts_page');
+}
+
+function wordbb_plugin_options_menu() {
+	add_options_page('WordBB Options', 'WordBB Options', 8, 'wordbb-options', 'wordbb_options_page');
+}
+
+function wordbb_options_page() {
+	global $wordbb;
+
+?>
+<div class="wrap">
+<h2>WordBB Options</h2>
+
+	<p style="margin-left: 8px"><em><?php echo __('Welcome in WordBB\'s configuration panel. From here you can manage all the plugin settings to take full advantage of the bridge.<br />'); ?></em></p>
+
+<form method="post" action="options.php">
+
+	<h3>MyBB data</h3>
+
+	<table class="form-table">
+
+		<tr valign="top">
+			<th scope="row">MyBB URL</th>
+			<td><input type="text" name="wordbb_mybb_url" size="40" value="<?php echo get_option('wordbb_mybb_url'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">MyBB absolute path on server</th>
+			<td><input type="text" name="wordbb_mybb_abs" size="40" value="<?php echo get_option('wordbb_mybb_abs'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">MyBB DB name (optional) (*)</th>
+			<td><input type="text" name="wordbb_dbname" size="40" value="<?php echo get_option('wordbb_dbname'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">MyBB DB username (optional) (*)</th>
+			<td><input type="text" name="wordbb_dbuser" size="40" value="<?php echo get_option('wordbb_dbuser'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">MyBB DB password (optional) (*)</th>
+			<td><input type="password" name="wordbb_dbpass" size="40" value="<?php echo get_option('wordbb_dbpass'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">MyBB DB host (optional) (*)</th>
+			<td><input type="text" name="wordbb_dbhost" size="40" value="<?php echo get_option('wordbb_dbhost'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">MyBB DB prefix (optional) (*)</th>
+			<td><input type="text" name="wordbb_dbprefix" size="40" value="<?php echo get_option('wordbb_dbprefix'); ?>" /></td>
+		</tr>
+
+	</table>
+
+	<h3>Bridge settings and comment system</h3>
+
+	<table class="form-table">
+
+		<tr valign="top">
+			<th scope="row">Create MyBB thread on WP post publish</th>
+			<td><input type="checkbox" name="wordbb_create_thread" <?php if(get_option('wordbb_create_thread')=='on') echo 'checked'; ?> /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Delete MyBB thread on WP post deletion</th>
+			<td><input type="checkbox" name="wordbb_delete_thread" <?php if(get_option('wordbb_delete_thread')=='on') echo 'checked'; ?> /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Use MyBB as comment system (**)</th>
+			<td><input type="checkbox" name="wordbb_use_mybb_comments" <?php if(get_option('wordbb_use_mybb_comments')=='on') echo 'checked'; ?> /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Show MyBB posts as comments on WordPress (***)</th>
+			<td><input type="checkbox" name="wordbb_show_mybb_comments" <?php if(get_option('wordbb_show_mybb_comments')=='on') echo 'checked'; ?> /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Default post forum</th>
+			<td>
+			<?php echo wordbb_get_array_html($wordbb->forums,'wordbb_post_forum',get_option('wordbb_post_forum'),'',array(),'fid') ?>
+			</td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Default post author</th>
+			<td>
+			<?php echo wordbb_get_array_html($wordbb->users,'wordbb_post_author',get_option('wordbb_post_author'),'',array(),'uid') ?>
+			</td>
+		</tr>
+
+	</table>
+
+	<h3>Friendly last visit</h3>
+
+	<table class="form-table">
+
+		<tr valign="top">
+			<th scope="row">Language "Today" string</th>
+			<td><input type="text" name="wordbb_langtoday" size="40" value="<?php echo get_option('wordbb_langtoday'); ?>" /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Language "Yesterday" string</th>
+			<td><input type="text" name="wordbb_langyesterday" size="40" value="<?php echo get_option('wordbb_langyesterday'); ?>" /></td>
+		</tr>
+
+	</table>
+
+<?php
+	settings_fields( 'wordbb' );
+?>
+
+<p class="submit">
+<input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
+</p>
+</form>
+
+<p>
+* Leaving the database fields empty, the plugin will assume that MyBB is installed on the same database as WordPress.
+</p>
+
+<p>
+** When this option is active, comments links will redirect to the corresponding MyBB threads (if any).
+</p>
+
+<p>*** When this option is active, MyBB posts will be displayed as WordPress comments in WP blog posts.<br />
+<strong>WARNING</strong>: Note that your comment form will still use WordPress' comment system, so if MyBB posts are displayed as comments on a specific post, any comment sent on that post will not be displayed when this option is active. You may want to encapsulate the comment form in your WordPress theme in an if statement using the <code>wordbb_get_thread_id()</code> function, e.g. <code>if(!wordbb_get_thread_id()) { // show WP comment form } else { // show link to MyBB thread using wordbb_thread_link() }</code>. For more details, please <a href="http://valadilene.org/wordbb/wordbb-template-changes">refer to this page</a>.
+</p>
+
+<br />
+<p style="margin-left: 8px"><em><?php echo __('WordBB - <a href="http://valadilene.org/wordbb">http://valadilene.org/wordbb</a>
+(<a href="http://valadilene.org/wordbb/wordbb-changelog">changelog</a>)<br />If you find this plugin useful or want to motivate me in my projects, please buy me a pizza! You can use the form in the sidebar over at <a href="http://valadilene.org">http://valadilene.org/wordbb</a> or the button below. Thanks!'); ?></em></p>
+
+<p>
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+<input type="hidden" name="cmd" value="_s-xclick">
+<input type="hidden" name="hosted_button_id" value="7033720">
+<input type="image" src="https://www.paypal.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+<img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1">
+</form>
+</p>
+
+
+</div>
+
+<?php
+}
+
+function wordbb_categories_page() {
+	global $wordbb, $wpdb;
+
+?>
+<div class="wrap">
+
+<h2>WordBB Categories</h2>
+
+	<p style="margin-left: 8px"><em><?php echo __('Here you can link WordPress categories to MyBB forums. Every blog post published in a particular category will be duplicated in the corresponding MyBB section.<br />Do not forget to activate HTML code on the MyBB forums you link to WordPress.<br />'); ?></em></p>
+
+<form method="post" action="<?php echo $wordbb->action_url ?>">
+
+<div class="tablenav">
+
+<?php
+$pagenum = isset( $_GET['pagenum'] ) ? absint( $_GET['pagenum'] ) : 0;
+if ( empty($pagenum) )
+	$pagenum = 1;
+
+$cats_per_page = get_user_option('categories_per_page');
+if ( empty($cats_per_page) )
+	$cats_per_page = 20;
+$cats_per_page = apply_filters('edit_categories_per_page', $cats_per_page);
+
+if ( !empty($_GET['s']) )
+	$num_cats = count(get_categories(array('hide_empty' => 0, 'search' => $_GET['s'])));
+else
+	$num_cats = wp_count_terms('category');
+
+$page_links = paginate_links( array(
+	'base' => add_query_arg( 'pagenum', '%#%' ),
+	'format' => '',
+	'prev_text' => __('&laquo;'),
+	'next_text' => __('&raquo;'),
+	'total' => ceil($num_cats / $cats_per_page),
+	'current' => $pagenum
+));
+
+if ( $page_links )
+	echo "<div class='tablenav-pages'>$page_links</div>";
+?>
+
+<br class="clear" />
+</div>
+
+<div class="clear"></div>
+
+<?php
+
+	add_action('manage_categories_custom_column', 'wordbb_cat_custom_column', 8, 3);
+	add_filter('manage_categories_columns', 'wordbb_cat_columns');
+
+?>
+
+<table class="widefat fixed" cellspacing="0">
+	<thead>
+	<tr>
+<?php print_column_headers('categories'); ?>
+	</tr>
+	</thead>
+
+	<tfoot>
+	<tr>
+<?php print_column_headers('categories', false); ?>
+	</tr>
+	</tfoot>
+
+	<tbody id="the-list" class="list:cat">
+<?php
+cat_rows(0, 0, 0, $pagenum, $cats_per_page);
+?>
+	</tbody>
+</table>
+
+<input type="hidden" name="action" value="save_categories" />
+<?php wp_nonce_field( 'wordbb_save_categories' ) ?>
+
+<p class="submit">
+<input type="submit" class="button-primary" value="<?php _e('Save Changes') ?>" />
+</p>
+
+</form>
+</div>
+
+</div>
+
+<?php
+}
+
+function wordbb_posts_page() {
+	global $wordbb, $wpdb, $wp_query;
+
+?>
+<div class="wrap">
+
+<h2>WordBB Posts</h2>
+
+<form method="post" action="<?php echo $wordbb->action_url ?>">
+
+<div class="tablenav">
+
+<?php
+$pagenum = isset( $_GET['pagenum'] ) ? absint( $_GET['pagenum'] ) : 0;
+if ( empty($pagenum) )
+	$pagenum = 1;
+
+$cats_per_page = get_user_option('categories_per_page');
+if ( empty($cats_per_page) )
+	$cats_per_page = 20;
+$cats_per_page = apply_filters('edit_categories_per_page', $cats_per_page);
+
+if ( !empty($_GET['s']) )
+	$num_cats = count(get_categories(array('hide_empty' => 0, 'search' => $_GET['s'])));
+else
+	$num_cats = wp_count_terms('category');
+
+$page_links = paginate_links( array(
+	'base' => add_query_arg( 'pagenum', '%#%' ),
+	'format' => '',
+	'prev_text' => __('&laquo;'),
+	'next_text' => __('&raquo;'),
+	'total' => ceil($num_cats / $cats_per_page),
+	'current' => $pagenum
+));
+
+if ( $page_links )
+	echo "<div class='tablenav-pages'>$page_links</div>";
+?>
+
+<br class="clear" />
+</div>
+
+<div class="clear"></div>
+
+<?php
+
+	add_action('manage_posts_custom_column', 'wordbb_posts_custom_column', 8, 2);
+	add_filter('manage_posts_columns', 'wordbb_posts_columns');
+
+	wp_edit_posts_query();
+
+	$posts=&$wp_query->posts;
+	$tids=array();
+
+	foreach($posts as $post)
+	{
+		$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+		if(!empty($bridge))
+			$tids[]=$bridge->mybb_id;
+	}
+
+	$wordbb->postcounts=_wordbb_get_threads_postcounts($tids);
+
+?>
+
+<?php include( 'edit-post-rows.php' ); ?>
+
+
+<input type="hidden" name="action" value="bridge_posts" />
+<?php wp_nonce_field( 'wordbb_bridge_posts' ) ?>
+
+<p class="submit">
+<input type="submit" class="button-primary" value="<?php _e('Bulk Bridge Posts') ?>" />
+</p>
+
+</form>
+</div>
+
+</div>
+
+<?php
+}
+
+function wordbb_cat_columns($defaults) {
+    $defaults['wordbb_cat_forum'] = __('MyBB forum');
+    return $defaults;
+}
+
+function wordbb_cat_custom_column($value, $column_name, $id) {
+	global $wordbb;
+
+    switch( $column_name ) {
+		case 'wordbb_cat_forum':
+		{
+			$bridge=wordbb_get_bridge(WORDBB_CAT,$id);
+			if($bridge)
+			{
+				$cat_forum=$bridge->mybb_id;
+			}
+
+			return wordbb_get_array_html($wordbb->forums,"wordbb_cat_forums[$id]",$cat_forum,'(default)',array(get_option('wordbb_post_forum')),'fid');
+		}
+		break;
+    }
+}
+
+function wordbb_get_array_html($array,$name,$default='',$blank='',$exclude=array(),$id_text='id')
+{
+	global $wordbb;
+
+	if(!$array)
+		return '(not available)';
+
+	$html='';
+	$html.='<select name="'.$name.'">';
+	$html.='<option value="">'.$blank.'</option>';
+	foreach($array as $k=>$v) {
+		if(!empty($exclude) && is_array($exclude) && array_search($k,$exclude)!==false)
+			continue;
+
+		$html.='<option value="'.$k.'"';
+		if(!empty($default) && $k==$default) $html.=' selected="selected"';
+		$html.='>'.$v." ({$id_text} {$k})".'</option>';
+	}
+	$html.='</select>';
+
+	return $html;
+}
+
+function wordbb_filter_post_content($content)
+{
+	// remove more tag
+	$content=str_replace('<!--more-->','',$content);
+	return $content;
+}
+
+function wordbb_publish_post($id)
+{
+	global $wordbb;
+
+	if(get_option('wordbb_create_thread')!="on")
+		return;
+
+	wordbb_bridge_wp_post($id);
+}
+
+function wordbb_bridge_wp_post($id)
+{
+	$post_bridge=wordbb_get_bridge(WORDBB_POST,$id);
+
+	$post=get_post($id);
+	$post->post_content=wordbb_filter_post_content($post->post_content);
+
+	$categories=get_the_category($post->ID);
+	$category=$categories[0]; // FIXME
+
+	// get mybb forum corresponding to wp post category
+	$fid=false;
+	$bridge=wordbb_get_bridge(WORDBB_CAT,$category->cat_ID);
+	if($bridge)
+		$fid=$bridge->mybb_id;
+
+	if(empty($fid))
+	{
+		// if a bridge was not found, use default forum
+		$fid=get_option('wordbb_post_forum');
+	}
+
+	// get mybb user corresponding to wp post author
+	$uid=false;
+	$bridge=wordbb_get_bridge(WORDBB_USER,$post->post_author);
+	if($bridge)
+		$uid=$bridge->mybb_id;
+
+	if(empty($uid))
+	{
+		// if a bridge was not found, use default author
+		$uid=get_option('wordbb_post_author');
+		if(!$uid)
+			return;
+	}
+
+	if($post_bridge)
+	{
+		$params=array();
+		$params['tid']=$post_bridge->mybb_id;
+		$params['subject']=$post->post_title;
+		$params['message']=$post->post_content;
+		$params['fid']=$fid;
+		$params['uid']=$uid;
+		$params['ip']=wordbb_get_ip();
+		$ret=wordbb_do_action('update_thread',$params);
+
+		if(is_array($ret))
+		{
+			wordbb_set_errors($post->post_title,$ret);
+			return;
+		}
+	}
+	else
+	{
+		$params=array();
+		$params['subject']=$post->post_title;
+		$params['message']=$post->post_content;
+		$params['fid']=$fid;
+		$params['uid']=$uid;
+		$params['ip']=wordbb_get_ip();
+		$ret=wordbb_do_action('create_thread',$params);
+
+		if(is_array($ret))
+		{
+			if(!isset($ret['tid']))
+			{
+				wordbb_set_errors($post->post_title,$ret);
+				return;
+			}
+
+			// create bridge
+			wordbb_bridge(WORDBB_POST,$id,$ret['tid'],WORDBB_WP);
+		}
+	}
+}
+
+function wordbb_delete_bridge_thread($post)
+{
+	if(get_option('wordbb_delete_thread')!="on")
+		return;
+
+	$bridge=wordbb_get_bridge(WORDBB_POST,$post);
+
+	if($bridge)
+	{
+		$params=array();
+		$params['tid']=$bridge->mybb_id;
+		$ret=wordbb_do_action('delete_thread',$params);
+
+		if(intval($ret)===1)
+		{
+			wordbb_bridge(WORDBB_POST,$post,'',WORDBB_WP);
+		}
+	}
+}
+
+function wordbb_users_columns($defaults) {
+    $defaults['wordbb_mybb_user'] = __('MyBB user');
+    return $defaults;
+}
+
+function wordbb_users_custom_column($value, $column_name, $id) {
+	global $wordbb;
+
+	if($column_name!='wordbb_mybb_user')
+		return;
+
+	$bridge=wordbb_get_bridge(WORDBB_USER,$id);
+	$mybb_uid=$bridge->mybb_id;
+
+	$users=array();
+	foreach($wordbb->users as $uid=>$user)
+	{
+		$user_bridge=wordbb_get_bridge(WORDBB_USER,'',$uid);
+		if(empty($user_bridge) || (!empty($user_bridge) && $user_bridge->wp_id==$id))
+			$users[$uid]=$user;
+	}
+	return wordbb_get_array_html($users,"wordbb_users[$id]",$mybb_uid,'',array(),'uid');
+}
+
+function wordbb_posts_columns($defaults) {
+	$defaults['wordbb_mybb_thread'] = "MyBB thread";
+
+	unset($defaults['tags']);
+	return $defaults;
+}
+
+function wordbb_posts_custom_column($column_name, $id) {
+	global $wordbb;
+
+	$post=get_post($id);
+	$bridge=wordbb_get_bridge(WORDBB_POST,$id);
+	if($bridge)
+	{
+		$tid=$bridge->mybb_id;
+	}
+
+	switch($column_name)
+	{
+	case 'wordbb_mybb_thread':
+		{
+			echo "<div id='wordbb_column_{$id}'>";
+			if(empty($tid))
+			{
+?>
+	<a class="edit" href="<?php echo wp_nonce_url($wordbb->action_url.'?action=bridge_post&post='.$id,'wordbb_bridge_post_'.$id) ?>">Create thread</a>
+<?php
+			}
+			else
+			{
+				$onclick="return confirm('You are about to delete the MyBB thread linked to \'".$post->post_title."\'\\n\'Cancel\' to stop, \'OK\' to delete.')";
+
+?>
+	<a class="delete" href="<?php echo wp_nonce_url($wordbb->action_url.'?action=delete_bridge_thread&post='.$id,'wordbb_delete_bridge_thread_'.$id) ?>" onclick="<?php echo $onclick ?>">Delete thread</a>
+<?php
+			}
+
+			if(!empty($tid)) :
+?>
+		&mdash; <a href="<?php echo $wordbb->mybb_url ?>/showthread.php?tid=<?php echo $tid ?>" title="<?php echo $wordbb->postcounts[$tid]; ?> posts" target="_blank">View thread</a> (<?php echo $wordbb->postcounts[$tid]; ?> post<?php if($wordbb->postcounts[$tid]!=1) echo 's' ?>)
+
+<?php endif ?>
+
+		</div>
+<?php
+
+	}
+	break;
+	}
+
+}
+
+function wordbb_loop_start()
+{
+	global $wordbb, $wp_query;
+
+	$posts=&$wp_query->posts;
+
+	$tids=array();
+
+	foreach($posts as $post)
+	{
+		$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+		if(!empty($bridge))
+			$tids[]=$bridge->mybb_id;
+	}
+
+	$wordbb->postcounts=_wordbb_get_threads_postcounts($tids);
+	$wordbb->posts=_wordbb_get_threads_posts($tids);
+	$wordbb->lastposters=_wordbb_get_threads_lastposters($tids);
+}
+
+function wordbb_comment_loop_start()
+{
+	$wordbb->comment=0;
+}
+
+function wordbb_admin_users_update()
+{
+	$wordbb_users=$_GET['wordbb_users'];
+	if(!isset($wordbb_users))
+		return;
+
+	foreach($wordbb_users as $id=>$wordbb_user)
+	{
+		wordbb_bridge(WORDBB_USER,$id,$wordbb_user,WORDBB_WP);
+	}
+}
+
+function wordbb_get_comments_number($count)
+{
+	global $wordbb, $post;
+
+	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+	return $wordbb->postcounts[$bridge->mybb_id];
+}
+
+function wordbb_get_comments_array($comments)
+{
+	global $wordbb, $post;
+
+	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+	$replies=&$wordbb->posts[$bridge->mybb_id];
+
+	if(!empty($replies))
+	{
+		$comments=array();
+		foreach($replies as $reply)
+		{
+			$comment = null;
+			$comment->comment_ID = $reply->pid;
+			$comment->comment_post_ID = "0";
+			$comment->comment_author = $reply->username;
+			$comment->comment_author_email = "";
+			$comment->comment_author_url = "";
+			$comment->comment_author_IP = $reply->ipaddress;
+			$comment->comment_date = date('Y-m-d H:i:s',$reply->dateline);
+			$comment->comment_date_gmt = date('Y-m-d H:i:s',$reply->dateline);
+			$comment->comment_content = $reply->message;
+			$comment->comment_karma = "0";
+			$comment->comment_approved = "1";
+			$comment->comment_agent = "";
+			$comment->comment_type = "";
+			$comment->comment_parent = $reply->replyto;
+			$comment->user_id = "0";
+			
+			$comments[]=$comment;
+		}
+	}
+
+	return $comments;
+}
+
+function wordbb_get_comment_link()
+{
+	global $wordbb, $post;
+
+	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+	$tid=$bridge->mybb_id;
+	$pid=$wordbb->posts[$tid][$wordbb->comment]->pid;
+
+	// increment current comment counter
+	$wordbb->comment++;
+
+	return $wordbb->mybb_url.'/showthread.php?tid='.$tid.'&pid='.$pid.'#pid'.$pid;
+}
+/*
+function wordbb_user_register($id)
+{
+	$user=get_userdata($id);
+
+	$params=array();
+	$params['username']=$user->user_login;
+	$params['password']=$_POST['pass1'];
+	$params['email']=$user->user_email;
+	$ret=wordbb_do_action('create_mybb_user',$params);
+
+	if(is_array($ret))
+	{
+		wordbb_set_errors('MyBB user registration',$ret);
+		return;
+	}
+
+	// create bridge
+	wordbb_bridge(WORDBB_USER,$id,$ret['tid'],WORDBB_WP);
+}
+
+function wordbb_user_delete($id)
+{
+	// remove user bridge
+	wordbb_bridge(WORDBB_USER,$id);
+}*/
+
+?>
