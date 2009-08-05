@@ -51,3 +51,57 @@ No known problems so far! :)
 
 = I need X function, when will you add it? =
 Other functions will be added in the future; anyway, if you want to request a particular feature you'd like to see in WordBB, you can contact me at hangman@ordinaryvanity.com.
+
+== Changelog ==
+
+<h3>WordBB 0.1 Beta</h3>
+
+<b>August 4th 2009</b>
+<ul>
+<li>WP "more" tag is now filtered on duplication</li>
+<li>Thread update on WP post publish fixed</li>
+<li>Meta table gets created automatically if it doesn't exist yet</li>
+</ul>
+
+<b>July 26th 2009</b>
+<ul>
+<li>Implemented thread deletion upon WP post deletion</li>
+<li>Added thread deletion upon WP post deletion setting</li>
+</ul>
+
+<b>July 26th 2009</b>
+<ul>
+<li>Added wordbb_get_username template tag</li>
+<li>Added wordbb_get_avatar template tag</li>
+<li>Added wordbb_get_pms template tag</li>
+<li>Added wordbb_get_lastvisit template tag</li>
+<li>Added wordbb_get_friendly_lastvisit template tag</li>
+<li>Added wordbb_get_userinfo template tag</li>
+<li>Implemented bridge caching</li>
+<li>Implemented widget displaying latest threads/posts</li>
+<li>Added today/yesterday lang setting for friendly last visit tag</li>
+<li>Fixed bug in dropdowns in the users panel</li>
+<li>Added plugin configuration checking with warning messages</li>
+<li>Tested using MyBB on a different database</li>
+</ul>
+
+<b>July 19th 2009</b>
+<ul>
+<li>Forums / categories bridge</li>
+<li>Create thread on WP post publish</li>
+<li>Added thread's post count on posts admin panel</li>
+<li>Added "create thread on WP post publish" setting</li>
+<li>MyBB threads posts are now shown as comments on WP posts</li>
+<li>Added "Use MyBB as comment system" setting</li>
+<li>Added "Default post forum" setting</li>
+<li>Added "Default post author" setting</li>
+<li>get_comment_link filter which shows a link to the corresponding MyBB post</li>
+<li>Added wordbb_comments_popup_link template tag</li>
+<li>Added wordbb_get_thread_id template tag</li>
+<li>Added wordbb_get_thread_link template tag</li>
+</ul>
+
+<b>June 28th 2009</b>
+<ul>
+<li>Project started from scratch.</li>
+</ul>
