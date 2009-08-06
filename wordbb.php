@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1.2
+ * @version 0.1.3
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1.2
+Version: 0.1.3
 Author URI: http://valadilene.org
 */
 
@@ -966,9 +966,9 @@ function wordbb_bridge_wp_post($id)
 	}
 }
 
-function wordbb_delete_bridge_thread($post)
+function wordbb_delete_bridge_thread($post,$force=false)
 {
-	if(get_option('wordbb_delete_thread')!="on")
+	if(!$force && get_option('wordbb_delete_thread')!="on")
 		return;
 
 	$bridge=wordbb_get_bridge(WORDBB_POST,$post);

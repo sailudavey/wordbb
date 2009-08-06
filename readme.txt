@@ -58,6 +58,13 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.1.3 Beta</h3>
+
+<b>August 6th 2009</b>
+<ul>
+<li>Fixed bug on "Delete thread" function</li>
+</ul>
+
 <h3>WordBB 0.1.2 Beta</h3>
 
 <b>August 6th 2009</b>

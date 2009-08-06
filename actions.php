@@ -127,7 +127,7 @@ case 'delete_bridge_thread':
 		if(!wp_verify_nonce($nonce, 'wordbb_delete_bridge_thread_'.$post))
 			die; 
 
-		wordbb_delete_bridge_thread($post);
+		wordbb_delete_bridge_thread($post,true);
 
 		if(!$ajax)
 		{
