@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1.3
+ * @version 0.1.4
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1.3
+Version: 0.1.4
 Author URI: http://valadilene.org
 */
 
@@ -51,7 +51,6 @@ if($wordbb->init)
 
 		add_action('loop_start', 'wordbb_loop_start');
 		add_action('loop_end', 'wordbb_loop_end');
-		add_action('comment_loop_start', 'wordbb_comment_loop_start');
 
 		if(get_option('wordbb_use_mybb_comments')=='on')
 		{
@@ -61,6 +60,7 @@ if($wordbb->init)
 //			{
 				add_filter('comments_array', 'wordbb_get_comments_array');
 				add_filter('get_comment_link', 'wordbb_get_comment_link');
+				add_filter('comment_reply_link', 'wordbb_comment_reply_link', 8, 4);
 //			}
 		}
 	}
@@ -1087,6 +1087,8 @@ function wordbb_loop_start()
 	$wordbb->postcounts=_wordbb_get_threads_postcounts($tids);
 	$wordbb->posts=_wordbb_get_threads_posts($tids);
 	$wordbb->lastposters=_wordbb_get_threads_lastposters($tids);
+	$wordbb->comment=0;
+
 	$wordbb->loop_started=true;
 }
 
@@ -1162,15 +1164,34 @@ function wordbb_get_comment_link()
 {
 	global $wordbb, $post;
 
+	$wordbb->last_comment=$wordbb->comment;
+
 	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
 	$tid=$bridge->mybb_id;
-	$pid=$wordbb->posts[$tid][$wordbb->comment]->pid;
+	$pid=$wordbb->posts[$tid][$wordbb->last_comment]->pid;
 
 	// increment current comment counter
 	$wordbb->comment++;
 
 	return $wordbb->mybb_url.'/showthread.php?tid='.$tid.'&pid='.$pid.'#pid'.$pid;
 }
+
+function wordbb_comment_reply_link($link,$args,$comment,$post)
+{
+	global $wordbb;
+
+	extract($args, EXTR_SKIP);
+
+	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+	$tid=$bridge->mybb_id;
+	$pid=$wordbb->posts[$tid][$wordbb->last_comment]->pid;
+
+	$url=$wordbb->mybb_url.'/newreply.php?tid='.$tid.'&pid='.$pid.'#pid'.$pid;
+	$link="<a rel='nofollow' class='comment-reply-link' href='{$url}'>{$reply_text}</a>";
+
+	return $before.$link.$after;
+}
+
 /*
 function wordbb_user_register($id)
 {
