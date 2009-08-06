@@ -92,6 +92,29 @@ case 'bridge_posts':
 	}
 	break;
 
+case 'sync_bridge_thread':
+	{
+		require_once('inc/include_wp.php');
+
+		$post=wordbb_get_arg('post');
+		if(!isset($post))
+			die;
+
+		$nonce=$_REQUEST['_wpnonce'];
+		if(!wp_verify_nonce($nonce, 'wordbb_sync_bridge_thread_'.$post))
+			die; 
+
+		wordbb_bridge_wp_post($post);
+
+		if(!$ajax)
+		{
+			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php?page=wordbb-posts');
+		}
+
+		exit("true");
+	}
+	break;
+
 case 'delete_bridge_thread':
 	{
 		require_once('inc/include_wp.php');

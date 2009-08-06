@@ -10,7 +10,7 @@ Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1
+Version: 0.1.2
 Author URI: http://valadilene.org
 */
 
@@ -50,22 +50,23 @@ if($wordbb->init)
 		// non-admin enqueues, actions, and filters
 
 		add_action('loop_start', 'wordbb_loop_start');
+		add_action('loop_end', 'wordbb_loop_end');
 		add_action('comment_loop_start', 'wordbb_comment_loop_start');
 
 		if(get_option('wordbb_use_mybb_comments')=='on')
 		{
 			add_filter('get_comments_number', 'wordbb_get_comments_number');
 
-			if(get_option('wordbb_show_mybb_comments')=='on')
-			{
+//			if(get_option('wordbb_show_mybb_comments')=='on')
+//			{
 				add_filter('comments_array', 'wordbb_get_comments_array');
 				add_filter('get_comment_link', 'wordbb_get_comment_link');
-			}
+//			}
 		}
 	}
 
 	add_action('widgets_init', 'wordbb_register_widget');
-	add_action('user_register', 'wordbb_user_register');
+//	add_action('user_register', 'wordbb_user_register');
 }
 
 function wordbb_check_config() {
@@ -102,6 +103,8 @@ function wordbb_init() {
 
 	$wordbb->errors=array();
 	$wordbb->bridges=array();
+
+	$wordbb->loop_started=false;
 
 	// check if meta table exists, if not create it
 	$wpdb->query("CREATE TABLE IF NOT EXISTS `wordbb_meta` (`type` enum('cat','post','user'),`wp_id` int(11),`mybb_id` int(11))");
@@ -191,6 +194,7 @@ function wordbb_admin_init() {
 	register_setting( 'wordbb', 'wordbb_dbhost' );
 	register_setting( 'wordbb', 'wordbb_dbprefix' );
 	register_setting( 'wordbb', 'wordbb_create_thread' );
+	register_setting( 'wordbb', 'wordbb_create_thread_excerpt' );
 	register_setting( 'wordbb', 'wordbb_delete_thread' );
 	register_setting( 'wordbb', 'wordbb_use_mybb_comments' );
 	register_setting( 'wordbb', 'wordbb_show_mybb_comments' );
@@ -547,6 +551,11 @@ function wordbb_options_page() {
 		</tr>
 
 		<tr valign="top">
+			<th scope="row">Use post excerpt instead of full post as thread's message</th>
+			<td><input type="checkbox" name="wordbb_create_thread_excerpt" <?php if(get_option('wordbb_create_thread_excerpt')=='on') echo 'checked'; ?> /></td>
+		</tr>
+
+		<tr valign="top">
 			<th scope="row">Delete MyBB thread on WP post deletion</th>
 			<td><input type="checkbox" name="wordbb_delete_thread" <?php if(get_option('wordbb_delete_thread')=='on') echo 'checked'; ?> /></td>
 		</tr>
@@ -562,7 +571,7 @@ function wordbb_options_page() {
 		</tr>
 
 		<tr valign="top">
-			<th scope="row">Default post forum</th><?php echo get_option('wordbb_post_forum') ?>
+			<th scope="row">Default post forum</th>
 			<td>
 			<?php echo wordbb_get_array_html($wordbb->forums,'wordbb_post_forum',get_option('wordbb_post_forum'),'',array(),'fid') ?>
 			</td>
@@ -859,6 +868,13 @@ function wordbb_filter_post_content($content)
 	return $content;
 }
 
+function wordbb_get_post_teaser($content)
+{
+	// remove more tag
+	$content=explode('<!--more-->',$content);
+	return $content[0];
+}
+
 function wordbb_publish_post($id)
 {
 	global $wordbb;
@@ -874,7 +890,11 @@ function wordbb_bridge_wp_post($id)
 	$post_bridge=wordbb_get_bridge(WORDBB_POST,$id);
 
 	$post=get_post($id);
-	$post->post_content=wordbb_filter_post_content($post->post_content);
+
+	if(get_option('wordbb_create_thread_excerpt')=="on")
+		$post_content=wordbb_get_post_teaser($post->post_content);
+	else
+		$post_content=wordbb_filter_post_content($post->post_content);
 
 	$categories=get_the_category($post->ID);
 	$category=$categories[0]; // FIXME
@@ -910,7 +930,7 @@ function wordbb_bridge_wp_post($id)
 		$params=array();
 		$params['tid']=$post_bridge->mybb_id;
 		$params['subject']=$post->post_title;
-		$params['message']=$post->post_content;
+		$params['message']=$post_content;
 		$params['fid']=$fid;
 		$params['uid']=$uid;
 		$params['ip']=wordbb_get_ip();
@@ -926,7 +946,7 @@ function wordbb_bridge_wp_post($id)
 	{
 		$params=array();
 		$params['subject']=$post->post_title;
-		$params['message']=$post->post_content;
+		$params['message']=$post_content;
 		$params['fid']=$fid;
 		$params['uid']=$uid;
 		$params['ip']=wordbb_get_ip();
@@ -1023,13 +1043,15 @@ function wordbb_posts_custom_column($column_name, $id) {
 				$onclick="return confirm('You are about to delete the MyBB thread linked to \'".$post->post_title."\'\\n\'Cancel\' to stop, \'OK\' to delete.')";
 
 ?>
-	<a class="delete" href="<?php echo wp_nonce_url($wordbb->action_url.'?action=delete_bridge_thread&post='.$id,'wordbb_delete_bridge_thread_'.$id) ?>" onclick="<?php echo $onclick ?>">Delete thread</a>
+	<a class="edit" href="<?php echo wp_nonce_url($wordbb->action_url.'?action=sync_bridge_thread&post='.$id,'wordbb_sync_bridge_thread_'.$id) ?>">Sync</a> &mdash;
+
+	<a class="delete" href="<?php echo wp_nonce_url($wordbb->action_url.'?action=delete_bridge_thread&post='.$id,'wordbb_delete_bridge_thread_'.$id) ?>" onclick="<?php echo $onclick ?>">Delete</a>
 <?php
 			}
 
 			if(!empty($tid)) :
 ?>
-		&mdash; <a href="<?php echo $wordbb->mybb_url ?>/showthread.php?tid=<?php echo $tid ?>" title="<?php echo $wordbb->postcounts[$tid]; ?> posts" target="_blank">View thread</a> (<?php echo $wordbb->postcounts[$tid]; ?> post<?php if($wordbb->postcounts[$tid]!=1) echo 's' ?>)
+		&mdash; <a href="<?php echo $wordbb->mybb_url ?>/showthread.php?tid=<?php echo $tid ?>" title="<?php echo $wordbb->postcounts[$tid]; ?> posts" target="_blank">View</a> (<?php echo $wordbb->postcounts[$tid]; ?> post<?php if($wordbb->postcounts[$tid]!=1) echo 's' ?>)
 
 <?php endif ?>
 
@@ -1046,6 +1068,11 @@ function wordbb_loop_start()
 {
 	global $wordbb, $wp_query;
 
+	if($wordbb->loop_started)
+	{
+		return;
+	}
+
 	$posts=&$wp_query->posts;
 
 	$tids=array();
@@ -1060,6 +1087,14 @@ function wordbb_loop_start()
 	$wordbb->postcounts=_wordbb_get_threads_postcounts($tids);
 	$wordbb->posts=_wordbb_get_threads_posts($tids);
 	$wordbb->lastposters=_wordbb_get_threads_lastposters($tids);
+	$wordbb->loop_started=true;
+}
+
+function wordbb_loop_end()
+{
+	global $wordbb;
+
+	$wordbb->loop_started=false;
 }
 
 function wordbb_comment_loop_start()

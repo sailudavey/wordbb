@@ -102,7 +102,7 @@ function _wordbb_get_threads_lastposters($tids)
 	}
 	$in=rtrim($in,',');
 
-	$results=$wordbb->mybbdb->get_results("SELECT lastposter, tid FROM {$wordbb->table_threads} WHERE tid IN({$in}) GROUP BY(tid)");
+	$results=$wordbb->mybbdb->get_results("SELECT lastposter, tid FROM {$wordbb->table_threads} WHERE tid IN({$in}) AND replies>0 GROUP BY(tid)");
 	$lastposters=array();
 	foreach($results as $result)
 	{
