@@ -3,7 +3,7 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1
+ * @version 0.1.2
  */
 /*
 Plugin Name: WordBB - WP side
