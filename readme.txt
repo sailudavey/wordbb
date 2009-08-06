@@ -58,6 +58,16 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.1.2 Beta</h3>
+
+<b>August 6th 2009</b>
+<ul>
+<li>Added setting that allows to use the WP post's excerpt as thread message</li>
+<li>"Last post by" template tag fixed</li>
+<li>Added Sync thread function</li>
+<li>Fixed WP comments issue on single post page (now MyBB posts are shown instead of WP comments)</li>
+</ul>
+
 <h3>WordBB 0.1 Beta</h3>
 
 <b>August 4th 2009</b>
