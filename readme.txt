@@ -50,6 +50,9 @@ WordBB adds some functions which you can use in your WordPress theme:
 = Why you need this =
 Just think of a "News" section in your message board with all the threads displayed as post entries on your WordPress site. Your users will be able to post comments using your MyBB forums instead of the integrated WordPress comment system.
 
+= What's the Sync button for? =
+Let's suppose you create a thread, then you switch from full to excerpt mode: you have to resync the thread in order for it to have the excerpt as the message. Also, if you edit the bridged thread, you can use that button to restore it to its original content.
+
 = Known problems =
 No known problems so far! :)
 
