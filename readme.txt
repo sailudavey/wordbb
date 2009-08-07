@@ -15,6 +15,8 @@ The WordPress side handles situations such as post editing and deletion. Similar
 
 WordBB also allows linking between WordPress authors and MyBB users. In this way, when a blog post gets published, a thread is automatically created by the correct user.
 
+Another cool feature is a WordPress sidebar widget that displays the latest discussions from your MyBB board. You can set the maximum number of entries, exclude specific forum categories, and choose whether to show posts or threads.
+
 WordBB does everything behind the scene and doesn't require any code modification or hack: just install the plugin and in a few seconds it will be up and running. 
 Moreover it is fully customisable and fits nicely in WordPress's admin panel controls and style. WordPress and MyBB can run on different databases.
 
