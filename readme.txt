@@ -63,6 +63,13 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.1.5 Beta</h3>
+
+<b>August 22th 2009</b>
+<ul>
+<li>Added MyBB user link in comment's author URL</li>
+</ul>
+
 <h3>WordBB 0.1.4 Beta</h3>
 
 <b>August 6th 2009</b>

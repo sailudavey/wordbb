@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1.4
+ * @version 0.1.5
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1.4
+Version: 0.1.5
 Author URI: http://valadilene.org
 */
 
@@ -1138,10 +1138,10 @@ function wordbb_get_comments_array($comments)
 		{
 			$comment = null;
 			$comment->comment_ID = $reply->pid;
-			$comment->comment_post_ID = "0";
+			$comment->comment_post_ID = $post->ID;
 			$comment->comment_author = $reply->username;
 			$comment->comment_author_email = "";
-			$comment->comment_author_url = "";
+			$comment->comment_author_url = $wordbb->mybb_url.'/member.php?action=profile&uid='.$reply->uid;
 			$comment->comment_author_IP = $reply->ipaddress;
 			$comment->comment_date = date('Y-m-d H:i:s',$reply->dateline);
 			$comment->comment_date_gmt = date('Y-m-d H:i:s',$reply->dateline);
