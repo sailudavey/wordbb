@@ -15,7 +15,7 @@ function _wordbb_get_forums()
 }
 
 // DO NOT CALL THIS. use $wordbb->users instead
-function _wordbb_get_users()
+/*function _wordbb_get_users()
 {
 	global $wpdb, $wordbb;
 
@@ -28,7 +28,7 @@ function _wordbb_get_users()
 	}
 	return array('usernames'=>$users,'usersinfo'=>$usersinfo);
 }
-
+*/
 // DO NOT CALL THIS. use $wordbb->postcounts[tid] instead
 function _wordbb_get_threads_postcounts($tids)
 {
@@ -141,6 +141,20 @@ function wordbb_get_latest_posts($n=10,$exclude='')
 	$results=$wordbb->mybbdb->get_results("SELECT * FROM {$wordbb->table_posts} WHERE $where visible=1 ORDER BY dateline DESC LIMIT {$n}");
 
 	return $results;
+}
+
+function wordbb_get_user_info($uid)
+{
+	global $wpdb, $wordbb;
+
+	return $wordbb->mybbdb->get_row("SELECT * FROM {$wordbb->table_users} WHERE uid={$uid}");
+}
+
+function wordbb_get_user_info_by_username($username)
+{
+	global $wpdb, $wordbb;
+
+	return $wordbb->mybbdb->get_row("SELECT * FROM {$wordbb->table_users} WHERE username='{$username}'");
 }
 
 ?>

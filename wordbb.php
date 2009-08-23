@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1.5
+ * @version 0.1.6
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1.5
+Version: 0.1.6
 Author URI: http://valadilene.org
 */
 
@@ -92,6 +92,11 @@ function wordbb_check_config() {
 	$wordbb_post_author=get_option('wordbb_post_author');
 	if(false===$wordbb_post_author || empty($wordbb_post_author))
 		$errors[]='Default post author field empty';
+	else
+	{
+		if(!wordbb_get_user_info_by_username($wordbb_post_author))
+			$errors[]='Default post author username does not exist on MyBB';
+	}
 
 	if(!empty($errors))
 		wordbb_set_errors('Configuration is not complete. Go to <a href="options-general.php?page=wordbb-options">WordBB Options</a>',$errors,false);
@@ -120,8 +125,8 @@ function wordbb_init() {
 	$wordbb->table_threads=$prefix.'threads';
 	$wordbb->table_settings=$prefix.'settings';
 
-	wordbb_check_config();
 	$wordbb->init=wordbb_select_mybb_db();
+	wordbb_check_config();
 
 	wordbb_display_errors();
 
@@ -147,9 +152,12 @@ function wordbb_init() {
 
 		// forums array
 		$wordbb->forums=_wordbb_get_forums();
-		$users=_wordbb_get_users();
+		/*$users=_wordbb_get_users();
 		$wordbb->users=$users['usernames'];
-		$wordbb->usersinfo=$users['usersinfo'];
+		$wordbb->usersinfo=$users['usersinfo'];*/
+
+		// store default author's id
+		$wordbb_post_author=wordbb_get_user_info_by_username($wordbb_post_author)->uid;
 
 		// get currently logged in info (if any)
 		$mybbuser=$_COOKIE['mybbuser'];
@@ -158,8 +166,9 @@ function wordbb_init() {
 			$mybbuser=explode('_',$mybbuser);
 			$uid=$mybbuser[0];
 			$key=$mybbuser[1];
-			if($wordbb->usersinfo[$uid]->loginkey==$key)
-				$wordbb->loggeduserinfo=$wordbb->usersinfo[$uid];
+			$userinfo=wordbb_get_user_info($uid);
+			if($userinfo->loginkey==$key)
+				$wordbb->loggeduserinfo=$userinfo;
 		}
 
 		// define WP pluggables functions
@@ -185,7 +194,7 @@ function wordbb_admin_init() {
 
 	// register settings
 	register_setting( 'wordbb', 'wordbb_post_forum', 'intval' );
-	register_setting( 'wordbb', 'wordbb_post_author', 'intval' );
+	register_setting( 'wordbb', 'wordbb_post_author', '' );
 	register_setting( 'wordbb', 'wordbb_mybb_url' );
 	register_setting( 'wordbb', 'wordbb_mybb_abs', 'wordbb_mybb_abs_sanitize' );
 	register_setting( 'wordbb', 'wordbb_dbname' );
@@ -580,7 +589,7 @@ function wordbb_options_page() {
 		<tr valign="top">
 			<th scope="row">Default post author</th>
 			<td>
-			<?php echo wordbb_get_array_html($wordbb->users,'wordbb_post_author',get_option('wordbb_post_author'),'',array(),'uid') ?>
+			<input type="text" name="wordbb_post_author" value="<?php echo get_option('wordbb_post_author') ?>" />
 			</td>
 		</tr>
 
@@ -920,7 +929,7 @@ function wordbb_bridge_wp_post($id)
 	if(empty($uid))
 	{
 		// if a bridge was not found, use default author
-		$uid=get_option('wordbb_post_author');
+		$uid=wordbb_get_user_info_by_username(get_option('wordbb_post_author'))->uid;
 		if(!$uid)
 			return;
 	}
@@ -1000,14 +1009,16 @@ function wordbb_users_custom_column($value, $column_name, $id) {
 	$bridge=wordbb_get_bridge(WORDBB_USER,$id);
 	$mybb_uid=$bridge->mybb_id;
 
-	$users=array();
+/*	$users=array();
 	foreach($wordbb->users as $uid=>$user)
 	{
 		$user_bridge=wordbb_get_bridge(WORDBB_USER,'',$uid);
 		if(empty($user_bridge) || (!empty($user_bridge) && $user_bridge->wp_id==$id))
 			$users[$uid]=$user;
 	}
-	return wordbb_get_array_html($users,"wordbb_users[$id]",$mybb_uid,'',array(),'uid');
+	return wordbb_get_array_html($users,"wordbb_users[$id]",$mybb_uid,'',array(),'uid');*/
+
+	return '<input type="text" name="wordbb_users['.$id.']" value="'.wordbb_get_user_info($mybb_uid)->username.'" />';
 }
 
 function wordbb_posts_columns($defaults) {
@@ -1107,12 +1118,21 @@ function wordbb_comment_loop_start()
 function wordbb_admin_users_update()
 {
 	$wordbb_users=$_GET['wordbb_users'];
+
 	if(!isset($wordbb_users))
 		return;
 
 	foreach($wordbb_users as $id=>$wordbb_user)
 	{
-		wordbb_bridge(WORDBB_USER,$id,$wordbb_user,WORDBB_WP);
+		$mybb_user=wordbb_get_user_info_by_username($wordbb_user);
+		if(!empty($mybb_user))
+		{
+			wordbb_bridge(WORDBB_USER,$id,$mybb_user->uid,WORDBB_WP);
+		}
+		else
+		{
+			wordbb_bridge(WORDBB_USER,$id,'',WORDBB_WP);
+		}
 	}
 }
 
