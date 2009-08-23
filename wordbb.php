@@ -82,8 +82,13 @@ function wordbb_check_config() {
 	if(false===$wordbb_mybb_abs || empty($wordbb_mybb_abs))
 		$errors[]='MyBB root folder field empty';
 
-	if(!empty($wordbb_mybb_abs) && !file_exists($wordbb_mybb_abs))
-		$errors[]='MyBB root folder does not exist';
+	if(!empty($wordbb_mybb_abs))
+	{
+		if(!file_exists($wordbb_mybb_abs))
+			$errors[]='MyBB root folder does not exist';
+		else if(!file_exists($wordbb_mybb_abs.'/global.php'))
+			$errors[]='MyBB global.php file not found. Check your MyBB root folder path!';
+	}
 
 	$wordbb_post_forum=get_option('wordbb_post_forum');
 	if(false===$wordbb_post_forum || empty($wordbb_post_forum))

@@ -68,6 +68,7 @@ Other functions will be added in the future; anyway, if you want to request a pa
 <b>August 23th 2009</b>
 <ul>
 <li>Replaced user comboboxes with editboxes (in this way there is no need to load all users at once anymore)</li>
+<li>Added check for MyBB global.php file</li>
 </ul>
 
 <h3>WordBB 0.1.5 Beta</h3>
