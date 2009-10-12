@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1.6
+ * @version 0.1.7
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1.6
+Version: 0.1.7
 Author URI: http://valadilene.org
 */
 
@@ -587,7 +587,13 @@ function wordbb_options_page() {
 		<tr valign="top">
 			<th scope="row">Default post forum</th>
 			<td>
-			<?php echo wordbb_get_array_html($wordbb->forums,'wordbb_post_forum',get_option('wordbb_post_forum'),'',array(),'fid') ?>
+			<?php
+			$html=wordbb_get_array_html($wordbb->forums,'wordbb_post_forum',get_option('wordbb_post_forum'),'',array(),'fid');
+			if(empty($html))
+				echo '(mybb forums table not available)';
+			else
+				echo $html;
+			?>
 			</td>
 		</tr>
 
@@ -857,7 +863,7 @@ function wordbb_get_array_html($array,$name,$default='',$blank='',$exclude=array
 	global $wordbb;
 
 	if(!$array)
-		return '(not available)';
+		return false;
 
 	$html='';
 	$html.='<select name="'.$name.'">';
