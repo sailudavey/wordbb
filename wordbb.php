@@ -162,7 +162,9 @@ function wordbb_init() {
 		$wordbb->usersinfo=$users['usersinfo'];*/
 
 		// store default author's id
-		$wordbb_post_author=wordbb_get_user_info_by_username($wordbb_post_author)->uid;
+		$post_author=wordbb_get_user_info_by_username($wordbb_post_author);
+		if(!empty($post_author))
+			$wordbb_post_author=$post_author->uid;
 
 		// get currently logged in info (if any)
 		$mybbuser=$_COOKIE['mybbuser'];
