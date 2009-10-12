@@ -942,7 +942,10 @@ function wordbb_bridge_wp_post($id)
 	if(empty($uid))
 	{
 		// if a bridge was not found, use default author
-		$uid=wordbb_get_user_info_by_username(get_option('wordbb_post_author'))->uid;
+		$post_author=wordbb_get_user_info_by_username(get_option('wordbb_post_author'));
+		if(!empty($post_author))
+			$uid=$post_author->uid;
+
 		if(!$uid)
 			return;
 	}
@@ -1031,7 +1034,11 @@ function wordbb_users_custom_column($value, $column_name, $id) {
 	}
 	return wordbb_get_array_html($users,"wordbb_users[$id]",$mybb_uid,'',array(),'uid');*/
 
-	return '<input type="text" name="wordbb_users['.$id.']" value="'.wordbb_get_user_info($mybb_uid)->username.'" />';
+	$mybb_user=wordbb_get_user_info($mybb_uid);
+	if(!empty($mybb_user))
+		$username=$mybb_user->username;
+
+	return '<input type="text" name="wordbb_users['.$id.']" value="'.$username.'" />';
 }
 
 function wordbb_posts_columns($defaults) {
