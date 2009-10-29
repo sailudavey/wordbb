@@ -281,6 +281,11 @@ case 'create_post':
 			'options' => array('signature'=>true,'disablesmilies'=>false,'subscriptionmethod'=>false)
 		);
 		$create = $MyBBI->createPost($data,false);
+		$thread=$MyBBI->getThread($tid);
+		$fid=$thread['fid'];
+
+		update_forum_lastpost($fid);
+
 		exit(serialize($create));
 	}
 	break;

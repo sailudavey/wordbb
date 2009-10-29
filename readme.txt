@@ -63,16 +63,17 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
-<h3>WordBB 0.1.9 Beta</h3>
+<h3>WordBB 0.2 Beta</h3>
 
 <b>October 29th 2009</b>
 <ul>
-<li>Fixed bug in get_comments_number() hook</li>
 <li>Now it's possible to post a comment on the forums through WP's form</li>
 <li>Added "Redirect to MyBB thread when using WP's comment form" setting</li>
 <li>Fixed bug in Sync function</li>
 <li>Fixed bug in get_comment_link() hook</li>
 <li>Now you can leave "Default Post Forum" empty in order to avoid syncing by default (and maybe enable it only for specific categories in "WordBB Categories" section)</li>
+<li>Fixed createPost function bug</li>
+<li>Fixed bug in get_comments_number() hook</li>
 </ul>
 
 <h3>WordBB 0.1.6 Beta</h3>
