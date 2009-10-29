@@ -59,7 +59,7 @@ Let's suppose you create a thread, then you switch from full to excerpt mode: yo
 No known problems so far! :)
 
 = I need X function, when will you add it? =
-Other functions will be added in the future; anyway, if you want to request a particular feature you'd like to see in WordBB, you can contact me at hangman@ordinaryvanity.com.
+Other functions will be added in the future; anyway, if you want to request a particular feature you'd like to see in WordBB, you can contact me here: http://valadilene.org/contacts.
 
 == Changelog ==
 
