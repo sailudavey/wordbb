@@ -935,7 +935,8 @@ function wordbb_bridge_wp_post($id)
 
 	$categories=get_the_category($post->ID);
 //	$category=$categories[0]; // FIXME
-	foreach($categories)
+
+	foreach($categories as $category)
 	{
 		// get mybb forum corresponding to wp post category
 		$fid=false;
