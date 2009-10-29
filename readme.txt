@@ -10,7 +10,7 @@ This is a bridge between WordPress blogging platform and MyBB message board.
 
 == Description ==
 
-WordBB's main feature is creating a thread for each blog post in a particular section, so that the forum can be used as a replacement to the blog comment system. 
+WordBB's main feature is to create a thread for each blog post in a particular section, so that the forum can be used as a replacement to the blog comment system. 
 The WordPress side handles situations such as post editing and deletion. Similarly, the MyBB side takes account of the thread actions which are reflected on the corresponding WordPress post.
 
 WordBB also allows linking between WordPress authors and MyBB users. In this way, when a blog post gets published, a thread is automatically created by the correct user.
