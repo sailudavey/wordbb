@@ -208,7 +208,7 @@ case 'update_thread':
 			"icon" => -1,
 			"uid" => $uid,
 			"username" => $username,
-			"edit_uid" => -1,
+			"edit_uid" => '',
 			"message" => $message
 		);
 
@@ -246,6 +246,45 @@ case 'delete_thread':
 		exit("$deleted");
 	}
 	break;
+
+case 'create_post':
+	{
+		$nonce=$_POST['_wordbbnonce'];
+		if(!wordbb_verify_nonce($nonce,'create_post'))
+			die;
+
+		$mybb_root=$_POST['wordbb_mybb_abs'];
+		if(!isset($mybb_root))
+			die;
+
+		require_once('inc/include_mybb.php');
+
+		$subject=$_POST['subject'];
+		$message=$_POST['message'];
+		$tid=$_POST['tid'];
+		$uid=$_POST['uid'];
+		$fid=$_POST['fid'];
+		$ip=$_POST['ip'];
+
+		$user=$MyBBI->getUser($uid);
+		$username=$user['username'];
+
+		$data = array(
+			'tid' => $tid,
+			'fid' => $fid,
+			'uid' => $uid,
+			'username' => $username,
+			'ipaddress' => $ip,
+			'subject' => $subject,
+			'message' => $message,
+			'savedraft' => false,
+			'options' => array('signature'=>true,'disablesmilies'=>false,'subscriptionmethod'=>false)
+		);
+		$create = $MyBBI->createPost($data,false);
+		exit(serialize($create));
+	}
+	break;
+
 /*
 case 'create_mybb_user':
 	{

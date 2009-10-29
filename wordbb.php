@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.1.8
+ * @version 0.1.9
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.1.8
+Version: 0.1.9
 Author URI: http://valadilene.org
 */
 
@@ -54,12 +54,20 @@ if($wordbb->init)
 
 		if(get_option('wordbb_use_mybb_comments')=='on')
 		{
+			add_action('pre_comment_on_post','wordbb_comment_on_post');
+
 			add_filter('get_comments_number', 'wordbb_get_comments_number');
 
 //			if(get_option('wordbb_show_mybb_comments')=='on')
 //			{
 				add_filter('comments_array', 'wordbb_get_comments_array');
-				add_filter('get_comment_link', 'wordbb_get_comment_link');
+				if(!isset($_POST['comment_post_ID']))
+				{
+					// only override comment links if we're not using
+					// the wp comment form (which uses get_comment_link()
+					// to redirect the user to the comments page)
+					add_filter('get_comment_link', 'wordbb_get_comment_link', 0, 3);
+				}
 				add_filter('comment_reply_link', 'wordbb_comment_reply_link', 8, 4);
 //			}
 		}
@@ -90,9 +98,9 @@ function wordbb_check_config() {
 			$errors[]='MyBB global.php file not found. Check your MyBB root folder path!';
 	}
 
-	$wordbb_post_forum=get_option('wordbb_post_forum');
+/*	$wordbb_post_forum=get_option('wordbb_post_forum');
 	if(false===$wordbb_post_forum || empty($wordbb_post_forum))
-		$errors[]='Default post forum field empty';
+		$errors[]='Default post forum field empty';*/
 
 	$wordbb_post_author=get_option('wordbb_post_author');
 	if(false===$wordbb_post_author || empty($wordbb_post_author))
@@ -214,6 +222,7 @@ function wordbb_admin_init() {
 	register_setting( 'wordbb', 'wordbb_delete_thread' );
 	register_setting( 'wordbb', 'wordbb_use_mybb_comments' );
 	register_setting( 'wordbb', 'wordbb_show_mybb_comments' );
+	register_setting( 'wordbb', 'wordbb_redirect_mybb' );
 	register_setting( 'wordbb', 'wordbb_langtoday', 'wordbb_langtoday_sanitize' );
 	register_setting( 'wordbb', 'wordbb_langyesterday', 'wordbb_langyesterday_sanitize' );
 
@@ -512,7 +521,7 @@ function wordbb_options_page() {
 <div class="wrap">
 <h2>WordBB Options</h2>
 
-	<p style="margin-left: 8px"><em><?php echo __('Welcome in WordBB\'s configuration panel. From here you can manage all the plugin settings to take full advantage of the bridge.<br />'); ?></em></p>
+	<p style="margin-left: 8px"><em><?php echo __('Welcome in WordBB\'s configuration panel. Here you can tweak all the plugin settings to take full advantage of the bridge.<br />'); ?></em></p>
 
 <form method="post" action="options.php">
 
@@ -584,6 +593,11 @@ function wordbb_options_page() {
 		<tr valign="top">
 			<th scope="row">Show MyBB posts as comments on WordPress (***)</th>
 			<td><input type="checkbox" name="wordbb_show_mybb_comments" <?php if(get_option('wordbb_show_mybb_comments')=='on') echo 'checked'; ?> /></td>
+		</tr>
+
+		<tr valign="top">
+			<th scope="row">Redirect to MyBB thread when using WP's comment form (will redirect to WP comments if unchecked)</th>
+			<td><input type="checkbox" name="wordbb_redirect_mybb" <?php if(get_option('wordbb_redirect_mybb')=='on') echo 'checked'; ?> /></td>
 		</tr>
 
 		<tr valign="top">
@@ -876,7 +890,8 @@ function wordbb_get_array_html($array,$name,$default='',$blank='',$exclude=array
 
 		$html.='<option value="'.$k.'"';
 		if(!empty($default) && $k==$default) $html.=' selected="selected"';
-		$html.='>'.$v." ({$id_text} {$k})".'</option>';
+		$id=(!empty($k))?" ({$id_text} {$k})":'';
+		$html.='>'.$v.$id.'</option>';
 	}
 	$html.='</select>';
 
@@ -931,6 +946,12 @@ function wordbb_bridge_wp_post($id)
 	{
 		// if a bridge was not found, use default forum
 		$fid=get_option('wordbb_post_forum');
+
+		if(empty($fid))
+		{
+			// still nothing, give up
+			return;
+		}
 	}
 
 	// get mybb user corresponding to wp post author
@@ -1156,12 +1177,46 @@ function wordbb_admin_users_update()
 	}
 }
 
+function wordbb_comment_on_post($comment_post_ID)
+{
+	global $wordbb;
+
+	$bridge=wordbb_get_bridge(WORDBB_POST,$comment_post_ID);
+	if(!empty($bridge))
+	{
+		// post this reply to the corresponding thread
+
+		$comment_content = ( isset($_POST['comment']) ) ? trim($_POST['comment']) : null;
+
+		$params=array();
+		$params['message']=$comment_content;
+		$params['uid']=$wordbb->loggeduserinfo->uid;
+		$params['tid']=$bridge->mybb_id;
+		$params['ip']=wordbb_get_ip();
+		$ret=wordbb_do_action('create_post',$params);
+
+		$pid=$ret['pid'];
+
+		if(get_option('wordbb_redirect_mybb')=='on')
+			$location=$wordbb->mybb_url.'/showthread.php?tid='.$bridge->mybb_id.'&pid='.$pid.'#pid'.$pid;
+		else
+			$location=get_permalink($comment_post_ID).'#comment-'.$pid;
+
+		header('Location: '.$location);
+
+		exit;
+	}
+}
+
 function wordbb_get_comments_number($count)
 {
 	global $wordbb, $post;
 
 	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
-	return $wordbb->postcounts[$bridge->mybb_id];
+	if(!empty($bridge))
+		return $wordbb->postcounts[$bridge->mybb_id];
+
+	return $count;
 }
 
 function wordbb_get_comments_array($comments)
@@ -1169,44 +1224,52 @@ function wordbb_get_comments_array($comments)
 	global $wordbb, $post;
 
 	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
-	$replies=&$wordbb->posts[$bridge->mybb_id];
-
-	if(!empty($replies))
+	if(!empty($bridge))
 	{
-		$comments=array();
-		foreach($replies as $reply)
+		$comments=null;
+		$replies=&$wordbb->posts[$bridge->mybb_id];
+
+		if(!empty($replies))
 		{
-			$comment = null;
-			$comment->comment_ID = $reply->pid;
-			$comment->comment_post_ID = $post->ID;
-			$comment->comment_author = $reply->username;
-			$comment->comment_author_email = "";
-			$comment->comment_author_url = $wordbb->mybb_url.'/member.php?action=profile&uid='.$reply->uid;
-			$comment->comment_author_IP = $reply->ipaddress;
-			$comment->comment_date = date('Y-m-d H:i:s',$reply->dateline);
-			$comment->comment_date_gmt = date('Y-m-d H:i:s',$reply->dateline);
-			$comment->comment_content = $reply->message;
-			$comment->comment_karma = "0";
-			$comment->comment_approved = "1";
-			$comment->comment_agent = "";
-			$comment->comment_type = "";
-			$comment->comment_parent = $reply->replyto;
-			$comment->user_id = "0";
-			
-			$comments[]=$comment;
+			$comments=array();
+
+			foreach($replies as $reply)
+			{
+				$comment = null;
+				$comment->comment_ID = $reply->pid;
+				$comment->comment_post_ID = $post->ID;
+				$comment->comment_author = $reply->username;
+				$comment->comment_author_email = "";
+				$comment->comment_author_url = $wordbb->mybb_url.'/member.php?action=profile&uid='.$reply->uid;
+				$comment->comment_author_IP = $reply->ipaddress;
+				$comment->comment_date = date('Y-m-d H:i:s',$reply->dateline);
+				$comment->comment_date_gmt = date('Y-m-d H:i:s',$reply->dateline);
+				$comment->comment_content = $reply->message;
+				$comment->comment_karma = "0";
+				$comment->comment_approved = "1";
+				$comment->comment_agent = "";
+				$comment->comment_type = "";
+				$comment->comment_parent = $reply->replyto;
+				$comment->user_id = "0";
+				
+				$comments[]=$comment;
+			}
 		}
 	}
 
 	return $comments;
 }
 
-function wordbb_get_comment_link()
+function wordbb_get_comment_link($link,$comment,$args)
 {
 	global $wordbb, $post;
 
+	if(empty($post_ID))
+		$post_ID=$post->ID;
+
 	$wordbb->last_comment=$wordbb->comment;
 
-	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
+	$bridge=wordbb_get_bridge(WORDBB_POST,$post_ID);
 	$tid=$bridge->mybb_id;
 	$pid=$wordbb->posts[$tid][$wordbb->last_comment]->pid;
 
@@ -1223,12 +1286,14 @@ function wordbb_comment_reply_link($link,$args,$comment,$post)
 	extract($args, EXTR_SKIP);
 
 	$bridge=wordbb_get_bridge(WORDBB_POST,$post->ID);
-	$tid=$bridge->mybb_id;
-	$pid=$wordbb->posts[$tid][$wordbb->last_comment]->pid;
+	if(!empty($bridge))
+	{
+		$tid=$bridge->mybb_id;
+		$pid=$wordbb->posts[$tid][$wordbb->last_comment]->pid;
 
-	$url=$wordbb->mybb_url.'/newreply.php?tid='.$tid.'&pid='.$pid.'#pid'.$pid;
-	$link="<a rel='nofollow' class='comment-reply-link' href='{$url}'>{$reply_text}</a>";
-
+		$url=$wordbb->mybb_url.'/newreply.php?tid='.$tid.'&pid='.$pid.'#pid'.$pid;
+		$link="<a rel='nofollow' class='comment-reply-link' href='{$url}'>{$reply_text}</a>";
+	}
 	return $before.$link.$after;
 }
 
