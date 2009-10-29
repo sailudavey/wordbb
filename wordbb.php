@@ -952,7 +952,7 @@ function wordbb_bridge_wp_post($id)
 			if(empty($fid))
 			{
 				// still nothing, give up
-				return;
+				continue;
 			}
 		}
 
