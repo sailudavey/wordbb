@@ -934,7 +934,6 @@ function wordbb_bridge_wp_post($id)
 		$post_content=wordbb_filter_post_content($post->post_content);
 
 	$categories=get_the_category($post->ID);
-//	$category=$categories[0]; // FIXME
 
 	foreach($categories as $category)
 	{

@@ -63,6 +63,13 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.2.1 Beta</h3>
+
+<b>October 30th 2009</b>
+<ul>
+<li>Bug which occurred when a post had more than one category besides a linked one and prevented post merging</li>
+</ul>
+
 <h3>WordBB 0.2 Beta</h3>
 
 <b>October 29th 2009</b>
