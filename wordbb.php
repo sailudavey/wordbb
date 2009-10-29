@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.2
+ * @version 0.2.1
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.2
+Version: 0.2.1
 Author URI: http://valadilene.org
 */
 
@@ -934,80 +934,82 @@ function wordbb_bridge_wp_post($id)
 		$post_content=wordbb_filter_post_content($post->post_content);
 
 	$categories=get_the_category($post->ID);
-	$category=$categories[0]; // FIXME
-
-	// get mybb forum corresponding to wp post category
-	$fid=false;
-	$bridge=wordbb_get_bridge(WORDBB_CAT,$category->cat_ID);
-	if($bridge)
-		$fid=$bridge->mybb_id;
-
-	if(empty($fid))
+//	$category=$categories[0]; // FIXME
+	foreach($categories)
 	{
-		// if a bridge was not found, use default forum
-		$fid=get_option('wordbb_post_forum');
+		// get mybb forum corresponding to wp post category
+		$fid=false;
+		$bridge=wordbb_get_bridge(WORDBB_CAT,$category->cat_ID);
+		if($bridge)
+			$fid=$bridge->mybb_id;
 
 		if(empty($fid))
 		{
-			// still nothing, give up
-			return;
+			// if a bridge was not found, use default forum
+			$fid=get_option('wordbb_post_forum');
+
+			if(empty($fid))
+			{
+				// still nothing, give up
+				return;
+			}
 		}
-	}
 
-	// get mybb user corresponding to wp post author
-	$uid=false;
-	$bridge=wordbb_get_bridge(WORDBB_USER,$post->post_author);
-	if($bridge)
-		$uid=$bridge->mybb_id;
+		// get mybb user corresponding to wp post author
+		$uid=false;
+		$bridge=wordbb_get_bridge(WORDBB_USER,$post->post_author);
+		if($bridge)
+			$uid=$bridge->mybb_id;
 
-	if(empty($uid))
-	{
-		// if a bridge was not found, use default author
-		$post_author=wordbb_get_user_info_by_username(get_option('wordbb_post_author'));
-		if(!empty($post_author))
-			$uid=$post_author->uid;
-
-		if(!$uid)
-			return;
-	}
-
-	if($post_bridge)
-	{
-		$params=array();
-		$params['tid']=$post_bridge->mybb_id;
-		$params['subject']=$post->post_title;
-		$params['message']=$post_content;
-		$params['fid']=$fid;
-		$params['uid']=$uid;
-		$params['ip']=wordbb_get_ip();
-		$ret=wordbb_do_action('update_thread',$params);
-
-		if(is_array($ret))
+		if(empty($uid))
 		{
-			wordbb_set_errors($post->post_title,$ret);
-			return;
+			// if a bridge was not found, use default author
+			$post_author=wordbb_get_user_info_by_username(get_option('wordbb_post_author'));
+			if(!empty($post_author))
+				$uid=$post_author->uid;
+
+			if(!$uid)
+				return;
 		}
-	}
-	else
-	{
-		$params=array();
-		$params['subject']=$post->post_title;
-		$params['message']=$post_content;
-		$params['fid']=$fid;
-		$params['uid']=$uid;
-		$params['ip']=wordbb_get_ip();
-		$ret=wordbb_do_action('create_thread',$params);
 
-		if(is_array($ret))
+		if($post_bridge)
 		{
-			if(!isset($ret['tid']))
+			$params=array();
+			$params['tid']=$post_bridge->mybb_id;
+			$params['subject']=$post->post_title;
+			$params['message']=$post_content;
+			$params['fid']=$fid;
+			$params['uid']=$uid;
+			$params['ip']=wordbb_get_ip();
+			$ret=wordbb_do_action('update_thread',$params);
+
+			if(is_array($ret))
 			{
 				wordbb_set_errors($post->post_title,$ret);
 				return;
 			}
+		}
+		else
+		{
+			$params=array();
+			$params['subject']=$post->post_title;
+			$params['message']=$post_content;
+			$params['fid']=$fid;
+			$params['uid']=$uid;
+			$params['ip']=wordbb_get_ip();
+			$ret=wordbb_do_action('create_thread',$params);
 
-			// create bridge
-			wordbb_bridge(WORDBB_POST,$id,$ret['tid'],WORDBB_WP);
+			if(is_array($ret))
+			{
+				if(!isset($ret['tid']))
+				{
+					wordbb_set_errors($post->post_title,$ret);
+					return;
+				}
+
+				// create bridge
+				wordbb_bridge(WORDBB_POST,$id,$ret['tid'],WORDBB_WP);
+			}
 		}
 	}
 }
