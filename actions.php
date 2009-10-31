@@ -263,8 +263,10 @@ case 'create_post':
 		$message=$_POST['message'];
 		$tid=$_POST['tid'];
 		$uid=$_POST['uid'];
-		$fid=$_POST['fid'];
 		$ip=$_POST['ip'];
+
+		$thread=$MyBBI->getThread($tid);
+		$fid=$thread['fid'];
 
 		$user=$MyBBI->getUser($uid);
 		$username=$user['username'];
@@ -282,7 +284,6 @@ case 'create_post':
 		);
 		$create = $MyBBI->createPost($data,false);
 		$thread=$MyBBI->getThread($tid);
-		$fid=$thread['fid'];
 
 		update_forum_lastpost($fid);
 

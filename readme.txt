@@ -63,6 +63,14 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.2.2 Beta</h3>
+
+<b>October 31th 2009</b>
+<ul>
+<li>Fixed bug when posting comments using WP's form</li>
+<li>Happy Halloween!</li>
+</ul>
+
 <h3>WordBB 0.2.1 Beta</h3>
 
 <b>October 30th 2009</b>
