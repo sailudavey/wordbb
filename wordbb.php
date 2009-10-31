@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.2.2
+ * @version 0.2.3
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.2.2
+Version: 0.2.3
 Author URI: http://valadilene.org
 */
 
@@ -1191,7 +1191,7 @@ function wordbb_comment_on_post($comment_post_ID)
 		$comment_content = ( isset($_POST['comment']) ) ? trim($_POST['comment']) : null;
 
 		$params=array();
-		$params['message']=$comment_content;
+		$params['message']=stripslashes($comment_content);
 		$params['uid']=$wordbb->loggeduserinfo->uid;
 		$params['tid']=$bridge->mybb_id;
 		$params['ip']=wordbb_get_ip();

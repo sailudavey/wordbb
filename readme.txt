@@ -63,11 +63,11 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
-<h3>WordBB 0.2.2 Beta</h3>
+<h3>WordBB 0.2.3 Beta</h3>
 
 <b>October 31th 2009</b>
 <ul>
-<li>Fixed bug when posting comments using WP's form</li>
+<li>Fixed fid and slashes bug when using WP form</li>
 <li>Happy Halloween!</li>
 </ul>
 
