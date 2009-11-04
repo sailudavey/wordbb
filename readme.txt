@@ -63,6 +63,13 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.2.4 Beta</h3>
+
+<b>November 4th 2009</b>
+<ul>
+<li>Fixed scheduled post bug</li>
+</ul>
+
 <h3>WordBB 0.2.3 Beta</h3>
 
 <b>October 31th 2009</b>
