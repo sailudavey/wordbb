@@ -3,7 +3,7 @@ Contributors: Hangman
 Donate link: http://valadilene.org/wordbb
 Tags: mybb, integration, bridge
 Requires at least: 2.0.2
-Tested up to: 2.8.5
+Tested up to: 2.8.6
 Stable tag: trunk
 
 This is a bridge between WordPress blogging platform and MyBB message board.
