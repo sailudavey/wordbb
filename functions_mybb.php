@@ -157,4 +157,9 @@ function wordbb_get_user_info_by_username($username)
 	return $wordbb->mybbdb->get_row("SELECT * FROM {$wordbb->table_users} WHERE username='{$username}'");
 }
 
+function wordbb_validate_password_from_uid($uid,$pass,$user_info)
+{
+	return validate_password_from_uid($uid,$pass,$user_info);
+}
+
 ?>

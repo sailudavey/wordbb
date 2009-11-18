@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.2.4
+ * @version 0.2.5
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.2.4
+Version: 0.2.5
 Author URI: http://valadilene.org
 */
 
@@ -254,6 +254,7 @@ function wordbb_widget_control()
 		if(!isset($title) || empty($title))
 			$title='Forums Latest '.($mode=='threads'?'Threads':'Posts');
 		$exclude=$_POST['wordbb_widget_exclude'];
+		$usernames=$_POST['wordbb_widget_usernames'];
 		if(!empty($exclude))
 		{
 			$exclude=explode(',',trim($exclude));
@@ -273,12 +274,14 @@ function wordbb_widget_control()
 		update_option('wordbb_widget_title',$title);
 		update_option('wordbb_widget_mode',$mode);
 		update_option('wordbb_widget_exclude',$exclude);
+		update_option('wordbb_widget_usernames',$usernames);
 		update_option('wordbb_widget_count',$count);
 	}
 
 	$title=get_option('wordbb_widget_title');
 	$mode=get_option('wordbb_widget_mode');
 	$exclude=get_option('wordbb_widget_exclude');
+	$usernames=get_option('wordbb_widget_usernames');
 	$count=get_option('wordbb_widget_count');
 
 ?>	
@@ -302,6 +305,10 @@ function wordbb_widget_control()
 		<span style="font-size: 6pt">(comma separated list of forum IDs)</span>
 		<input style="width: 100%" id="wordbb_widget_exclude" name="wordbb_widget_exclude" type="text" value="<?php echo $exclude ?>" />
 	</li>
+
+	<li><?php _e('Show usernames', 'wordbb'); ?>
+		<input id="wordbb_widget_usernames" name="wordbb_widget_usernames" type="checkbox" <?php if($usernames) : ?>checked="checked"<?php endif ?> />
+	</li>
 	</ul>
 
 	<input style="width: 100%" type="hidden" id="wordbb_widget_submit" name="wordbb_widget_submit" value="1" />
@@ -317,6 +324,7 @@ function wordbb_widget($args)
 	$mode=get_option('wordbb_widget_mode');
 	$title=get_option('wordbb_widget_title');
 	$exclude=get_option('wordbb_widget_exclude');
+	$usernames=get_option('wordbb_widget_usernames');
 	$count=get_option('wordbb_widget_count');
 
 	echo $before_widget;
@@ -339,6 +347,7 @@ function wordbb_widget($args)
 		<?php else : ?>
 		<a href="<?php echo $wordbb->mybb_url.'/showthread.php?tid='.$entry->tid.'&pid='.$entry->pid.'#pid'.$entry->pid ?>"><?php echo $entry->subject ?></a>
 		<?php endif ?>
+		by <a href="<?php echo $wordbb->mybb_url ?>/member.php?action=profile&uid=<?php echo $entry->uid ?>"><?php echo $entry->username ?></a>
 		</li>
 <?php
 		}
