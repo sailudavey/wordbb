@@ -326,6 +326,7 @@ function wordbb_widget($args)
 	$exclude=get_option('wordbb_widget_exclude');
 	$usernames=get_option('wordbb_widget_usernames');
 	$count=get_option('wordbb_widget_count');
+	$usernames=get_option('wordbb_usernames');
 
 	echo $before_widget;
 	echo $before_title;
@@ -347,7 +348,9 @@ function wordbb_widget($args)
 		<?php else : ?>
 		<a href="<?php echo $wordbb->mybb_url.'/showthread.php?tid='.$entry->tid.'&pid='.$entry->pid.'#pid'.$entry->pid ?>"><?php echo $entry->subject ?></a>
 		<?php endif ?>
+		<?php if($usernames) : ?>
 		by <a href="<?php echo $wordbb->mybb_url ?>/member.php?action=profile&uid=<?php echo $entry->uid ?>"><?php echo $entry->username ?></a>
+		<?php endif ?>
 		</li>
 <?php
 		}
