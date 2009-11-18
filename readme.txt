@@ -68,7 +68,6 @@ Other functions will be added in the future; anyway, if you want to request a pa
 <b>November 18th 2009</b>
 <ul>
 <li>Added checkbox for displaying usernames in Latest threads/posts widget</li>
-<li>Added wordbb_validate_password_from_uid() function</li>
 </ul>
 
 <h3>WordBB 0.2.4 Beta</h3>
