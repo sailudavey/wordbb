@@ -65,7 +65,7 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 <h3>WordBB 0.2.6 Beta</h3>
 
-<b>November 18th 2009</b>
+<b>November 23rd 2009</b>
 <ul>
 <li>Added checkbox for displaying usernames in Latest threads/posts widget</li>
 </ul>

@@ -3,14 +3,14 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.2.5
+ * @version 0.2.6
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.2.5
+Version: 0.2.6
 Author URI: http://valadilene.org
 */
 
@@ -326,7 +326,6 @@ function wordbb_widget($args)
 	$exclude=get_option('wordbb_widget_exclude');
 	$usernames=get_option('wordbb_widget_usernames');
 	$count=get_option('wordbb_widget_count');
-	$usernames=get_option('wordbb_usernames');
 
 	echo $before_widget;
 	echo $before_title;
