@@ -3,20 +3,20 @@
 /**
  * @package WordBB
  * @author Hangman
- * @version 0.2.6
+ * @version 0.2.7
  */
 /*
 Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.2.6
+Version: 0.2.7
 Author URI: http://valadilene.org
 */
 
-require_once('functions.php');
-require_once('functions_mybb.php');
-require_once('template.php');
+require('functions.php');
+require('functions_mybb.php');
+require('template.php');
 
 wordbb_init();
 
