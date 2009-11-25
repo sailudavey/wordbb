@@ -63,6 +63,13 @@ Other functions will be added in the future; anyway, if you want to request a pa
 
 == Changelog ==
 
+<h3>WordBB 0.2.9 Beta</h3>
+
+<b>November 25th 2009</b>
+<ul>
+<li>Fixed buggy code in the WordPress loop handler which tried to get thread info for posts without any corresponding thread</li>
+</ul>
+
 <h3>WordBB 0.2.6 Beta</h3>
 
 <b>November 23rd 2009</b>
