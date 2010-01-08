@@ -63,21 +63,21 @@ function wordbb_comments_popup_link($zero = false, $one = false, $more = false, 
 	{
 		$tid=$bridge->mybb_id;
 
-		if ( is_single() || is_page() )
-			return;
+		if ( false === $zero ) $zero = __( 'No Comments' );
+		if ( false === $one ) $one = __( '1 Comment' );
+		if ( false === $more ) $more = __( '% Comments' );
+		if ( false === $none ) $none = __( 'Comments Off' );
 
-		$number = get_comments_number($id);
+		$number = get_comments_number( $id );
 
-		if ( 0 == $number && 'closed' == $post->comment_status && 'closed' == $post->ping_status ) {
-			echo '<span' . ((!empty($css_class)) ? ' class="' . $css_class . '"' : '') . '>' . $none . '</span>';
+		if ( 0 == $number && !comments_open() && !pings_open() ) {
+			echo '<span' . ((!empty($css_class)) ? ' class="' . esc_attr( $css_class ) . '"' : '') . '>' . $none . '</span>';
 			return;
 		}
 
-		if ( !empty($post->post_password) ) { // if there's a password
-			if ($_COOKIE['wp-postpass_'.COOKIEHASH] != $post->post_password) {  // and it doesn't match the cookie
-				echo(__('Enter your password to view comments'));
-				return;
-			}
+		if ( post_password_required() ) {
+			echo __('Enter your password to view comments');
+			return;
 		}
 
 		echo '<a href="';
