@@ -673,7 +673,7 @@ function wordbb_options_page() {
 
 <br />
 <p style="margin-left: 8px"><em><?php echo __('WordBB - <a href="http://valadilene.org/wordbb">http://valadilene.org/wordbb</a>
-(<a href="http://valadilene.org/wordbb/wordbb-changelog">changelog</a>)<br />If you find this plugin useful or want to motivate me in my projects, please buy me a pizza! You can use the form in the sidebar over at <a href="http://valadilene.org">http://valadilene.org/wordbb</a> or the button below. Thanks!'); ?></em></p>
+(<a href="http://valadilene.org/wordbb/wordbb-changelog">changelog</a>) - <a href="http://twitter.com/monochromenight">Follow me</a> on Twitter!<br />If you find this plugin useful or want to motivate me in my projects, please buy me a pizza! You can use the form in the sidebar over at <a href="http://valadilene.org">http://valadilene.org/wordbb</a> or the button below. Thanks!'); ?></em></p>
 
 <p>
 <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
