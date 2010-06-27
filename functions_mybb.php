@@ -14,21 +14,6 @@ function _wordbb_get_forums()
 	return $forums;
 }
 
-// DO NOT CALL THIS. use $wordbb->users instead
-/*function _wordbb_get_users()
-{
-	global $wpdb, $wordbb;
-
-	$results=$wordbb->mybbdb->get_results("SELECT * FROM {$wordbb->table_users}");
-	$users=array();
-	foreach($results as $result)
-	{
-		$users[$result->uid]=$result->username;
-		$usersinfo[$result->uid]=$result;
-	}
-	return array('usernames'=>$users,'usersinfo'=>$usersinfo);
-}
-*/
 // DO NOT CALL THIS. use $wordbb->postcounts[tid] instead
 function _wordbb_get_threads_postcounts($tids)
 {
@@ -63,7 +48,8 @@ function _wordbb_get_threads_posts($tids)
 	$in=rtrim($in,',');
 
 	// get posts
-	$results=$wordbb->mybbdb->get_results("SELECT * FROM {$wordbb->table_posts} WHERE tid IN({$in}) AND visible=1 ORDER BY dateline ASC LIMIT 1,18446744073709551615");
+	$results=$wordbb->mybbdb->get_results("SELECT pid,tid,replyto,fid,subject,uid,username,".
+		"dateline,message,ipaddress FROM {$wordbb->table_posts} WHERE tid IN({$in}) AND visible=1 ORDER BY dateline ASC LIMIT 1,18446744073709551615");
 
 	$threads=array();
 	foreach($results as $result)
@@ -115,6 +101,16 @@ function wordbb_get_latest_threads($n=10,$exclude='')
 {
 	global $wpdb, $wordbb;
 
+	$exclude=rtrim($exclude,',');
+	if(!empty($wordbb->exclude_fids))
+	{
+		foreach($wordbb->exclude_fids as $fid)
+		{
+			$exclude.="$fid,";
+		}
+		$exclude=rtrim($exclude,',');
+	}
+	
 	$where='';
 	if(!empty($exclude))
 	{
@@ -122,7 +118,10 @@ function wordbb_get_latest_threads($n=10,$exclude='')
 	}
 	
 	// get latest threads
-	$results=$wordbb->mybbdb->get_results("SELECT * FROM {$wordbb->table_threads} WHERE $where visible=1 ORDER BY dateline DESC LIMIT {$n}");
+	$results=$wordbb->mybbdb->get_results($wpdb->prepare("SELECT tid,fid,subject,".
+		"uid,username,dateline,lastpost,lastposter,".
+		"lastposteruid FROM {$wordbb->table_threads} ".
+		"WHERE $where visible=1 ORDER BY dateline DESC LIMIT %d",$n));
 
 	return $results;
 }
@@ -131,6 +130,16 @@ function wordbb_get_latest_posts($n=10,$exclude='')
 {
 	global $wpdb, $wordbb;
 
+	$exclude=rtrim($exclude,',');	
+	if(!empty($wordbb->exclude_fids))
+	{
+		foreach($wordbb->exclude_fids as $fid)
+		{
+			$exclude.="$fid,";
+		}
+		$exclude=rtrim($exclude,',');
+	}
+	
 	$where='';
 	if(!empty($exclude))
 	{
@@ -138,7 +147,9 @@ function wordbb_get_latest_posts($n=10,$exclude='')
 	}
 
 	// get latest posts
-	$results=$wordbb->mybbdb->get_results("SELECT * FROM {$wordbb->table_posts} WHERE $where visible=1 ORDER BY dateline DESC LIMIT {$n}");
+	$results=$wordbb->mybbdb->get_results($wpdb->prepare("SELECT pid,tid,replyto,fid,subject,uid,username,".
+		"dateline,message,ipaddress FROM {$wordbb->table_posts} WHERE $where visible=1 ".
+		"ORDER BY dateline DESC LIMIT %d",$n));
 
 	return $results;
 }
@@ -147,14 +158,20 @@ function wordbb_get_user_info($uid)
 {
 	global $wpdb, $wordbb;
 
-	return $wordbb->mybbdb->get_row("SELECT * FROM {$wordbb->table_users} WHERE uid={$uid}");
+	if(empty($uid))
+		return false;
+
+	return $wordbb->mybbdb->get_row($wpdb->prepare("SELECT * FROM {$wordbb->table_users} WHERE uid=%d",$uid));
 }
 
 function wordbb_get_user_info_by_username($username)
 {
 	global $wpdb, $wordbb;
 
-	return $wordbb->mybbdb->get_row("SELECT * FROM {$wordbb->table_users} WHERE username='{$username}'");
+	if(empty($username))
+		return false;
+
+	return $wordbb->mybbdb->get_row($wpdb->prepare("SELECT * FROM {$wordbb->table_users} WHERE username=%s",$username));
 }
 
 ?>

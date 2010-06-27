@@ -1,10 +1,7 @@
 <?php
-
 /*
 	WordBB template tags
-
-	This is part of WordBB plugin. Get it on http://valadilene.org/wordbb
-
+	This file is part of WordBB plugin. Get it on http://valadilene.org/wordbb
 	http://valadilene.org/
 */
 
@@ -132,7 +129,13 @@ function wordbb_get_avatar()
 {
 	global $wordbb;
 
-	return $wordbb->mybb_url.'/'.$wordbb->loggeduserinfo->avatar;
+	$avatar=$wordbb->loggeduserinfo->avatar;
+	$url=$avatar;
+
+	if($wordbb->loggeduserinfo->avatartype!='remote')
+		$url=$wordbb->mybb_url.'/'.$avatar;
+
+	return $url;
 }
 
 function wordbb_get_pms()
@@ -162,7 +165,7 @@ function wordbb_get_friendly_lastvisit()
 	return $lastvisit;
 }
 
-function wordbb_get_userinfo()
+function wordbb_get_logged_user_info()
 {
 	global $wordbb;
 

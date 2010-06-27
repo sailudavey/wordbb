@@ -1,8 +1,5 @@
 <?php
 
-/*if($_SERVER['REQUEST_METHOD']!=='POST')
-	die;*/
-
 require_once('functions.php');
 
 $wp_root='../../..';
@@ -24,7 +21,7 @@ switch($action)
 case 'save_categories':
 	{
 		require_once('inc/include_wp.php');
-
+		
 		$nonce=$_REQUEST['_wpnonce'];
 		if(!wp_verify_nonce($nonce, 'wordbb_save_categories'))
 			die;
@@ -61,7 +58,7 @@ case 'bridge_post':
 
 		if(!$ajax)
 		{
-			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php?page=wordbb-posts');
+			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php');
 		}
 
 	}
@@ -86,7 +83,7 @@ case 'bridge_posts':
 
 		if(!$ajax)
 		{
-			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php?page=wordbb-posts');
+			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php');
 		}
 
 	}
@@ -108,7 +105,7 @@ case 'sync_bridge_thread':
 
 		if(!$ajax)
 		{
-			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php?page=wordbb-posts');
+			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php');
 		}
 
 		exit("true");
@@ -131,7 +128,7 @@ case 'delete_bridge_thread':
 
 		if(!$ajax)
 		{
-			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php?page=wordbb-posts');
+			wp_redirect(get_bloginfo('wpurl').'/wp-admin/edit.php');
 		}
 
 		exit("true");

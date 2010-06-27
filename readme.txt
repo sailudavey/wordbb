@@ -3,7 +3,7 @@ Contributors: Hangman
 Donate link: http://valadilene.org/wordbb
 Tags: mybb, integration, bridge
 Requires at least: 2.0.2
-Tested up to: 2.9.1
+Tested up to: 3.0
 Stable tag: trunk
 
 This is a bridge between WordPress blogging platform and MyBB message board.
@@ -62,6 +62,18 @@ No known problems so far! :)
 Other functions will be added in the future; anyway, if you want to request a particular feature you'd like to see in WordBB, you can contact me here: http://valadilene.org/contacts.
 
 == Changelog ==
+
+<h3>WordBB 0.3</h3>
+
+<b>June 27th 2010</b>
+<ul>
+<li>wordbb_get_userinfo() renamed to wordbb_get_logged_user_info()</li>
+<li>Improved performance on some SQL queries</li>
+<li>It's now possible to add a link to the original WP post before or after the thread's post content</li>
+<li>Fixed some WP 3.0 compatibility bugs (posts and categories sections)</li>
+<li>Latest threads widget now checks user and forum permissions (e.g. protected forums won't be visible to guests)</li>
+<li>Fixed bug on the post excerpt function (now it checks if there's an excerpt, otherwise it just uses the content before the "more" tag)</li>
+</ul>
 
 <h3>WordBB 0.2.9 Beta</h3>
 
