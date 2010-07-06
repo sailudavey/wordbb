@@ -40,12 +40,14 @@ WordBB adds some functions which you can use in your WordPress theme:
 
 - wordbb_last_comment_by($line) : echoes a "Last comment by user" line. You can customize it using the $line parameter, in which "$user" will be replaced with the username.
 
-- wordbb_get_username() : returns the username for the MyBB user currently logged in.
-- wordbb_get_avatar() : returns the avatar link for the MyBB user currently logged in.
-- wordbb_get_pms() : returns an array with the personal messages of the MyBB user currently logged in.
-- wordbb_get_lastvisit() : returns the last visit time for the MyBB user currently logged in, as a timestamp.
-- wordbb_get_friendly_lastvisit() : returns the last visit time for the MyBB user currently logged in, as a "friendly" string.
-- wordbb_get_userinfo() : returns an object containing information about the MyBB user currently logged in.
+- wordbb_get_username() : returns the username for the currently logged in MyBB user.
+- wordbb_get_avatar() : returns the avatar link for the currently logged in MyBB user.
+- wordbb_get_pms() : returns an array with the personal messages of the currently logged in MyBB user.
+- wordbb_get_lastvisit() : returns the last visit time for the currently logged in MyBB user, as a timestamp.
+- wordbb_get_friendly_lastvisit() : returns the last visit time for the currently logged in MyBB user, as a "friendly" string.
+- wordbb_get_userinfo() : returns an object containing information about the currently logged in MyBB user.
+- wordbb_get_logout_key() : returns the logout key for the currently logged in MyBB user.
+- wordbb_get_logout_url() : returns the logout URL for the currently logged in MyBB user.
 
 == Frequently Asked Questions ==
 
