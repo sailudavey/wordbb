@@ -10,7 +10,7 @@ Plugin Name: WordBB - WP side
 Plugin URI: http://valadilene.org/wordbb
 Description: WordPress/MyBB bridge.
 Author: Hangman
-Version: 0.3
+Version: 0.3.1
 Author URI: http://valadilene.org
 */
 

@@ -172,4 +172,24 @@ function wordbb_get_logged_user_info()
 	return $wordbb->loggeduserinfo;
 }
 
+function wordbb_get_logout_key()
+{
+	global $wordbb;
+	
+	if(empty($wordbb->loggeduserinfo))
+		return false;
+	
+	return md5($wordbb->loggeduserinfo->loginkey);
+}
+
+function wordbb_get_logout_url()
+{
+	global $wordbb;
+	
+	if(empty($wordbb->loggeduserinfo))
+		return false;
+	
+	return $wordbb->mybb_url.'/member.php?action=logout&logoutkey='.wordbb_get_logout_key();	
+}
+
 ?>
